@@ -11,11 +11,19 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddInfrastructureServices(this IServiceCollection services, IConfiguration configuration)
     {
-        var connectionString = configuration.GetConnectionString("DefaultConnection") ?? "Data Source=tornomorales_rrhh.db";
+        var connectionString = configuration.GetConnectionString("DefaultConnection")
+            ?? "Host=localhost;Port=5432;Database=tornomorales_rrhh;Username=postgres;Password=postgres";
 
         services.AddDbContext<TornoDbContext>(options =>
         {
-            options.UseSqlite(connectionString);
+            options.UseNpgsql(connectionString, npgsqlOptions =>
+            {
+                npgsqlOptions.EnableRetryOnFailure(
+                    maxRetryCount: 5,
+                    maxRetryDelay: TimeSpan.FromSeconds(30),
+                    errorCodesToAdd: null);
+                npgsqlOptions.MigrationsAssembly(typeof(TornoDbContext).Assembly.GetName().Name);
+            });
         });
 
         services.AddScoped<IContratoRepository, ContratoRepository>();

@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using TornoMorales.Api.Data;
 using TornoMorales.Api.Middleware;
 using TornoMorales.Application;
@@ -29,10 +30,11 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-// Inicialización y Seeding de la Base de Datos SQLite
+// Aplicar migraciones pendientes y Seeding de la Base de Datos PostgreSQL
 using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<TornoDbContext>();
+    await dbContext.Database.MigrateAsync();   // Aplica migraciones automáticamente al iniciar
     await DbInitializer.SeedAsync(dbContext);
 }
 
