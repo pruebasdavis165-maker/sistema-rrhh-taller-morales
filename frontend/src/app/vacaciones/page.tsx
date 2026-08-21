@@ -107,8 +107,8 @@ export default function VacacionesPage() {
   return (
     <div className="flex-1 flex flex-col bg-slate-50 min-h-screen">
       <Header
-        title="Gestión y Control de Vacaciones"
-        subtitle="Control y verificación de saldo disponible antes de aprobación (RF-0004)"
+        title="Control de Vacaciones y Descansos"
+        subtitle="Verificación y cómputo de saldo disponible previo a autorización (RF-0004)"
       />
 
       <main className="p-8 max-w-7xl w-full mx-auto space-y-6">

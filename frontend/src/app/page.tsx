@@ -61,8 +61,8 @@ export default function DashboardPage() {
   return (
     <div className="flex-1 flex flex-col bg-slate-50 min-h-screen">
       <Header
-        title="Panel Principal de Control (Dashboard)"
-        subtitle="Sistema Integral para la Gestión de Recursos Humanos • Taller de Torno Morales López"
+        title="Panel Ejecutivo de Control"
+        subtitle="Sistema de Gestión de Recursos Humanos • Taller de Torno Morales López"
       />
 
       <main className="p-8 max-w-7xl w-full mx-auto space-y-8">
@@ -74,11 +74,11 @@ export default function DashboardPage() {
               Taller de Torno Morales López
             </div>
             <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
-              Bienvenido al Sistema de Gestión de RRHH
+              Gestión Integral de Recursos Humanos
             </h2>
-            <p className="mt-2 text-sm text-slate-300 leading-relaxed">
-              Plataforma centralizada con Arquitectura Hexagonal en .NET 9 y Next.js. Control estricto de no
-              solapamiento de contratos laborales (RF-0005) y validación previa de saldos de vacaciones (RF-0004).
+            <p className="mt-2 text-sm text-slate-300 leading-relaxed font-normal">
+              Plataforma empresarial de administración de personal con validación de no solapamiento
+              en contratos laborales (RF-0005) y control estricto de saldos de vacaciones (RF-0004).
             </p>
 
             <div className="flex flex-wrap gap-3 mt-6">
@@ -87,7 +87,7 @@ export default function DashboardPage() {
                 className="px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs rounded-xl shadow-md shadow-blue-600/30 flex items-center gap-2 transition-all"
               >
                 <FileText className="w-4 h-4" />
-                <span>Gestionar Contratos (RF-0005)</span>
+                <span>Gestión de Contratos</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </Link>
               <Link
@@ -95,7 +95,7 @@ export default function DashboardPage() {
                 className="px-4 py-2.5 bg-slate-800/80 hover:bg-slate-700 text-white font-semibold text-xs rounded-xl border border-slate-700 flex items-center gap-2 transition-all"
               >
                 <Palmtree className="w-4 h-4 text-emerald-400" />
-                <span>Control de Vacaciones (RF-0004)</span>
+                <span>Control de Vacaciones</span>
               </Link>
             </div>
           </div>

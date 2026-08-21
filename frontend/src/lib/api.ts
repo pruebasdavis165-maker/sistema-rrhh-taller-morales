@@ -159,3 +159,15 @@ export const empleadosApi = {
 export const auditoriaApi = {
   listar: (cantidad: number = 20) => request<AuditoriaDto[]>(`/auditoria?cantidad=${cantidad}`),
 };
+
+export const sistemaApi = {
+  healthCheck: async (): Promise<boolean> => {
+    try {
+      await request<AuditoriaDto[]>('/auditoria?cantidad=1');
+      return true;
+    } catch {
+      return false;
+    }
+  },
+};
+

@@ -83,8 +83,8 @@ export default function ContratosPage() {
   return (
     <div className="flex-1 flex flex-col bg-slate-50 min-h-screen">
       <Header
-        title="Gestión de Contratos Laborales"
-        subtitle="Administración de vigencias y validación estricta de no solapamiento temporal (RF-0005)"
+        title="Administración de Contratos Laborales"
+        subtitle="Control de vigencias y validación de no solapamiento temporal (RF-0005)"
       />
 
       <main className="p-8 max-w-7xl w-full mx-auto space-y-6">
