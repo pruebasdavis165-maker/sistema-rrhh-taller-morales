@@ -66,10 +66,11 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
 }
 
 export const contratosApi = {
-  listar: (params?: { empleadoId?: number; estado?: number; page?: number; pageSize?: number }) => {
+  listar: (params?: { empleadoId?: number; estado?: number; tipo?: number; page?: number; pageSize?: number }) => {
     const query = new URLSearchParams();
     if (params?.empleadoId) query.append('empleadoId', params.empleadoId.toString());
     if (params?.estado) query.append('estado', params.estado.toString());
+    if (params?.tipo) query.append('tipo', params.tipo.toString());
     if (params?.page) query.append('page', params.page.toString());
     if (params?.pageSize) query.append('pageSize', params.pageSize.toString());
     return request<PagedResult<ContratoDto>>(`/contratos?${query.toString()}`);

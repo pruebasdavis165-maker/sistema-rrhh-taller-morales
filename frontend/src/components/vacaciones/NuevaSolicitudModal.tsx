@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Modal from '@/components/Modal';
 import { vacacionesApi, empleadosApi } from '@/lib/api';
 import { EmpleadoDto, SaldoVacacionesDto } from '@/types';
-import { AlertCircle, CheckCircle2, Loader2, Calendar, Palmtree, User } from 'lucide-react';
+import { AlertCircle, Loader2, Calendar, Palmtree, User, Info, CheckCircle2 } from 'lucide-react';
 
 interface NuevaSolicitudModalProps {
   isOpen: boolean;
@@ -112,28 +112,28 @@ export default function NuevaSolicitudModal({ isOpen, onClose, onSuccess }: Nuev
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Solicitud de Vacaciones"
-      subtitle="Verificación obligatoria de saldo disponible según Código del Trabajo (RF-0004)"
+      title="Registro de Solicitud de Vacaciones"
+      subtitle="Verificación obligatoria de saldo acumulado según el Código del Trabajo (RF-0004)"
       maxWidth="lg"
     >
       <form onSubmit={handleSubmit} className="space-y-4">
         {errorMessage && (
-          <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-xs text-red-700 flex items-start gap-2">
-            <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
+          <div className="p-3 bg-rose-50 border border-rose-200/80 rounded-xl text-xs text-rose-700 flex items-start gap-2 animate-in fade-in">
+            <AlertCircle className="w-4 h-4 text-rose-600 flex-shrink-0 mt-0.5" />
             <span>{errorMessage}</span>
           </div>
         )}
 
         {/* Empleado Selector */}
         <div>
-          <label className="block text-xs font-semibold text-slate-700 mb-1">
-            Empleado Solicitante *
+          <label className="block text-xs font-semibold text-slate-800 mb-1">
+            Colaborador Solicitante *
           </label>
           <select
             value={formData.empleadoId}
             onChange={(e) => handleEmpleadoChange(Number(e.target.value))}
             required
-            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+            className="w-full px-3 py-2 bg-slate-50/80 hover:bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-700 focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
           >
             {empleados.map((emp) => (
               <option key={emp.id} value={emp.id}>
@@ -144,36 +144,36 @@ export default function NuevaSolicitudModal({ isOpen, onClose, onSuccess }: Nuev
         </div>
 
         {/* Saldo de Vacaciones Card (RF-0004 Live Feedback) */}
-        <div className="p-4 bg-slate-900 text-slate-100 rounded-xl border border-slate-800">
-          <div className="flex items-center justify-between pb-2 border-b border-slate-800">
-            <span className="text-xs font-semibold text-blue-400 flex items-center gap-1.5">
+        <div className="p-4 bg-slate-900 text-slate-100 rounded-2xl border border-slate-800 shadow-xs">
+          <div className="flex items-center justify-between pb-2 border-b border-slate-800/80">
+            <span className="text-xs font-bold text-blue-400 flex items-center gap-1.5">
               <Palmtree className="w-4 h-4" />
-              Estado de Saldo de Vacaciones
+              Estado de Saldo en Nómina (RF-0004)
             </span>
             {saldoLoading && <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-400" />}
           </div>
 
           {saldo && (
-            <div className="grid grid-cols-4 gap-2 mt-3 text-center">
-              <div className="bg-slate-800/80 p-2 rounded-lg">
-                <p className="text-[10px] text-slate-400 uppercase">Acumulados</p>
-                <p className="text-sm font-bold text-slate-200 mt-0.5">{saldo.diasAcumulados.toFixed(1)}</p>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mt-3 text-center">
+              <div className="bg-slate-800/70 border border-slate-700/60 p-2.5 rounded-xl">
+                <p className="text-[10px] text-slate-400 uppercase font-semibold">Acumulados</p>
+                <p className="text-sm font-bold text-slate-100 mt-0.5">{saldo.diasAcumulados.toFixed(1)} <span className="text-[10px] text-slate-400 font-normal">días</span></p>
               </div>
 
-              <div className="bg-slate-800/80 p-2 rounded-lg">
-                <p className="text-[10px] text-slate-400 uppercase">Gozados</p>
-                <p className="text-sm font-bold text-slate-400 mt-0.5">{saldo.diasGozados}</p>
+              <div className="bg-slate-800/70 border border-slate-700/60 p-2.5 rounded-xl">
+                <p className="text-[10px] text-slate-400 uppercase font-semibold">Gozados</p>
+                <p className="text-sm font-bold text-slate-300 mt-0.5">{saldo.diasGozados} <span className="text-[10px] text-slate-400 font-normal">días</span></p>
               </div>
 
-              <div className="bg-slate-800/80 p-2 rounded-lg">
-                <p className="text-[10px] text-amber-400 uppercase">Pendientes</p>
-                <p className="text-sm font-bold text-amber-400 mt-0.5">{saldo.diasPendientes}</p>
+              <div className="bg-slate-800/70 border border-slate-700/60 p-2.5 rounded-xl">
+                <p className="text-[10px] text-amber-400 uppercase font-semibold">Pendientes</p>
+                <p className="text-sm font-bold text-amber-400 mt-0.5">{saldo.diasPendientes} <span className="text-[10px] text-amber-400/80 font-normal">días</span></p>
               </div>
 
-              <div className={`p-2 rounded-lg ${saldo.saldoDisponible >= formData.diasSolicitados ? 'bg-emerald-950/80 border border-emerald-500/30' : 'bg-red-950/80 border border-red-500/30'}`}>
-                <p className="text-[10px] text-slate-300 uppercase font-semibold">Disponible</p>
-                <p className={`text-base font-extrabold mt-0.5 ${saldo.saldoDisponible >= formData.diasSolicitados ? 'text-emerald-400' : 'text-red-400'}`}>
-                  {saldo.saldoDisponible.toFixed(1)}
+              <div className={`p-2.5 rounded-xl border ${saldo.saldoDisponible >= formData.diasSolicitados ? 'bg-emerald-950/70 border-emerald-500/40 text-emerald-300' : 'bg-rose-950/70 border-rose-500/40 text-rose-300'}`}>
+                <p className="text-[10px] uppercase font-bold">Disponible</p>
+                <p className="text-base font-extrabold mt-0.5">
+                  {saldo.saldoDisponible.toFixed(1)} <span className="text-[10px] font-normal">días</span>
                 </p>
               </div>
             </div>
@@ -183,7 +183,7 @@ export default function NuevaSolicitudModal({ isOpen, onClose, onSuccess }: Nuev
         {/* Date Pickers */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">
+            <label className="block text-xs font-semibold text-slate-800 mb-1">
               Fecha de Inicio *
             </label>
             <input
@@ -191,12 +191,12 @@ export default function NuevaSolicitudModal({ isOpen, onClose, onSuccess }: Nuev
               value={formData.fechaInicio}
               onChange={(e) => handleFechasChange(e.target.value, formData.fechaFin)}
               required
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+              className="w-full px-3 py-2 bg-slate-50/80 hover:bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-700 focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">
+            <label className="block text-xs font-semibold text-slate-800 mb-1">
               Fecha de Finalización *
             </label>
             <input
@@ -205,15 +205,15 @@ export default function NuevaSolicitudModal({ isOpen, onClose, onSuccess }: Nuev
               min={formData.fechaInicio}
               onChange={(e) => handleFechasChange(formData.fechaInicio, e.target.value)}
               required
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+              className="w-full px-3 py-2 bg-slate-50/80 hover:bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-700 focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
             />
           </div>
         </div>
 
         {/* Requested days counter & warning */}
         <div>
-          <label className="block text-xs font-semibold text-slate-700 mb-1">
-            Días Solicitados a Tomar *
+          <label className="block text-xs font-semibold text-slate-800 mb-1">
+            Días Solicitados a Descontar *
           </label>
           <input
             type="number"
@@ -222,22 +222,22 @@ export default function NuevaSolicitudModal({ isOpen, onClose, onSuccess }: Nuev
             value={formData.diasSolicitados}
             onChange={(e) => setFormData({ ...formData, diasSolicitados: Number(e.target.value) })}
             required
-            className={`w-full px-3 py-2 rounded-lg text-xs font-bold border ${
+            className={`w-full px-3 py-2 rounded-xl text-xs font-bold border transition-colors ${
               saldoInsuficiente
-                ? 'bg-red-50 border-red-300 text-red-800 focus:ring-red-500'
+                ? 'bg-rose-50 border-rose-300 text-rose-800 focus:ring-rose-500'
                 : 'bg-slate-50 border-slate-200 text-slate-800 focus:ring-blue-500'
             }`}
           />
         </div>
 
         {saldoInsuficiente && (
-          <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-xs text-red-800 flex items-start gap-2 animate-in fade-in">
-            <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
+          <div className="p-3.5 bg-rose-50 border border-rose-200/80 rounded-xl text-xs text-rose-800 flex items-start gap-2.5 animate-in fade-in">
+            <AlertCircle className="w-4 h-4 text-rose-600 flex-shrink-0 mt-0.5" />
             <div>
-              <strong className="font-semibold block text-red-900">Saldo Insuficiente (RF-0004)</strong>
-              <p>
-                Está solicitando {formData.diasSolicitados} días pero el empleado solo cuenta con{' '}
-                <span className="font-bold">{saldo?.saldoDisponible.toFixed(1)} días disponibles</span>.
+              <strong className="font-bold block text-rose-900">Saldo Insuficiente (RF-0004)</strong>
+              <p className="mt-0.5 leading-relaxed text-[11px]">
+                Se están solicitando {formData.diasSolicitados} días, pero el saldo libre disponible del colaborador es de{' '}
+                <span className="font-bold">{saldo?.saldoDisponible.toFixed(1)} días</span>. Ajuste el período antes de registrar.
               </p>
             </div>
           </div>
@@ -245,7 +245,7 @@ export default function NuevaSolicitudModal({ isOpen, onClose, onSuccess }: Nuev
 
         {/* Motivo */}
         <div>
-          <label className="block text-xs font-semibold text-slate-700 mb-1">
+          <label className="block text-xs font-semibold text-slate-800 mb-1">
             Motivo o Justificación *
           </label>
           <textarea
@@ -253,7 +253,7 @@ export default function NuevaSolicitudModal({ isOpen, onClose, onSuccess }: Nuev
             value={formData.motivo}
             onChange={(e) => setFormData({ ...formData, motivo: e.target.value })}
             required
-            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+            className="w-full px-3 py-2 bg-slate-50/80 hover:bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-700 placeholder:text-slate-400 focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
           />
         </div>
 
@@ -262,17 +262,17 @@ export default function NuevaSolicitudModal({ isOpen, onClose, onSuccess }: Nuev
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+            className="px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-xl transition-colors"
           >
             Cancelar
           </button>
           <button
             type="submit"
             disabled={loading || saldoInsuficiente}
-            className={`px-5 py-2 text-xs font-semibold rounded-lg text-white transition-all flex items-center gap-2 ${
+            className={`px-5 py-2 text-xs font-semibold rounded-xl text-white transition-all flex items-center gap-2 ${
               saldoInsuficiente
                 ? 'bg-slate-400 cursor-not-allowed'
-                : 'bg-blue-600 hover:bg-blue-700 shadow-sm shadow-blue-600/30'
+                : 'bg-blue-600 hover:bg-blue-700 shadow-xs'
             }`}
           >
             {loading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}

@@ -14,13 +14,14 @@ import {
   Search,
   CheckCircle,
   Clock,
-  XCircle,
   Calendar,
   User,
   Loader2,
   Check,
   X,
   TrendingUp,
+  FilterX,
+  Sparkles,
 } from 'lucide-react';
 
 export default function VacacionesPage() {
@@ -49,7 +50,7 @@ export default function VacacionesPage() {
         vacacionesApi.listar({
           empleadoId: selectedEmpleadoId,
           estado: selectedEstado,
-          pageSize: 50,
+          pageSize: 100,
         }),
         empleadosApi.listar(),
       ]);
@@ -90,6 +91,12 @@ export default function VacacionesPage() {
     cargarSaldo(empId);
   };
 
+  const resetFiltros = () => {
+    setSelectedEmpleadoId(undefined);
+    setSelectedEstado(undefined);
+    setSearchTerm('');
+  };
+
   const solicitudesFiltradas = solicitudes.filter((s) => {
     if (!searchTerm) return true;
     const term = searchTerm.toLowerCase();
@@ -103,6 +110,7 @@ export default function VacacionesPage() {
   const pendientes = solicitudes.filter((s) => s.estado === EstadoVacaciones.Pendiente).length;
   const aprobadas = solicitudes.filter((s) => s.estado === EstadoVacaciones.Aprobada).length;
   const gozadas = solicitudes.filter((s) => s.estado === EstadoVacaciones.Gozada).length;
+  const hayFiltrosActivos = Boolean(selectedEmpleadoId || selectedEstado || searchTerm);
 
   return (
     <div className="flex-1 flex flex-col bg-slate-50 min-h-screen">
@@ -114,20 +122,20 @@ export default function VacacionesPage() {
       <main className="p-8 max-w-7xl w-full mx-auto space-y-6">
         {/* KPI Metrics */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+          <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center justify-between">
             <div>
               <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Solicitudes</p>
               <h3 className="text-2xl font-bold text-slate-800 mt-1">{totalSolicitudes}</h3>
-              <p className="text-[11px] text-slate-400 mt-0.5">Historial registrado</p>
+              <p className="text-[11px] text-slate-400 mt-0.5">Historial acumulado</p>
             </div>
             <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
               <Palmtree className="w-6 h-6" />
             </div>
           </div>
 
-          <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+          <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center justify-between">
             <div>
-              <p className="text-xs font-semibold text-amber-600 uppercase tracking-wider">Pendientes de Aprobación</p>
+              <p className="text-xs font-semibold text-amber-600 uppercase tracking-wider">Pendientes</p>
               <h3 className="text-2xl font-bold text-slate-800 mt-1">{pendientes}</h3>
               <p className="text-[11px] text-amber-600/80 mt-0.5">Requieren revisión</p>
             </div>
@@ -136,7 +144,7 @@ export default function VacacionesPage() {
             </div>
           </div>
 
-          <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+          <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center justify-between">
             <div>
               <p className="text-xs font-semibold text-emerald-600 uppercase tracking-wider">Aprobadas</p>
               <h3 className="text-2xl font-bold text-slate-800 mt-1">{aprobadas}</h3>
@@ -147,11 +155,11 @@ export default function VacacionesPage() {
             </div>
           </div>
 
-          <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+          <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center justify-between">
             <div>
-              <p className="text-xs font-semibold text-blue-600 uppercase tracking-wider">Gozadas / Tomadas</p>
+              <p className="text-xs font-semibold text-blue-600 uppercase tracking-wider">Gozadas</p>
               <h3 className="text-2xl font-bold text-slate-800 mt-1">{gozadas}</h3>
-              <p className="text-[11px] text-slate-400 mt-0.5">Períodos disfrutados</p>
+              <p className="text-[11px] text-slate-400 mt-0.5">Descansos completados</p>
             </div>
             <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
               <TrendingUp className="w-6 h-6" />
@@ -159,23 +167,27 @@ export default function VacacionesPage() {
           </div>
         </div>
 
-        {/* Live Employee Balance Viewer Card (RF-0004) */}
-        <div className="bg-gradient-to-br from-slate-900 to-slate-800 text-white p-6 rounded-2xl border border-slate-700 shadow-lg">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-700/60">
+        {/* Live Employee Balance Rediseñado (RF-0004) */}
+        <div className="bg-slate-900 text-white p-6 sm:p-7 rounded-3xl border border-slate-800 shadow-sm relative overflow-hidden">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-5 border-b border-slate-800/80">
             <div>
-              <span className="text-xs font-bold text-blue-400 uppercase tracking-wider">
-                Módulo de Consulta Rápida (RF-0004)
-              </span>
-              <h3 className="text-lg font-bold text-white mt-0.5">
-                Cálculo y Saldo Disponible de Vacaciones por Empleado
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[11px] font-semibold mb-1">
+                <Sparkles className="w-3 h-3" />
+                Cómputo Salarial en Vivo (RF-0004)
+              </div>
+              <h3 className="text-lg font-extrabold tracking-tight text-white">
+                Disponibilidad y Saldo Vacacional por Colaborador
               </h3>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Cálculo conforme a la ley laboral: 2.5 días por mes trabajado (30 días por año de antigüedad)
+              </p>
             </div>
 
             <div className="flex items-center gap-3">
               <select
                 value={selectedSaldoEmpleadoId || ''}
                 onChange={(e) => handleSaldoEmpleadoChange(Number(e.target.value))}
-                className="px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-xs text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="px-3.5 py-2 bg-slate-800/90 hover:bg-slate-800 border border-slate-700/80 rounded-xl text-xs text-slate-200 focus:outline-hidden focus:ring-2 focus:ring-blue-500 transition-colors"
               >
                 {empleados.map((emp) => (
                   <option key={emp.id} value={emp.id}>
@@ -188,62 +200,62 @@ export default function VacacionesPage() {
           </div>
 
           {saldoDetalle && (
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-4">
-              <div className="bg-slate-800/60 border border-slate-700 p-4 rounded-xl">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-5">
+              <div className="bg-slate-800/60 border border-slate-800 p-4 rounded-2xl">
                 <p className="text-[11px] text-slate-400 uppercase font-semibold">Días Acumulados</p>
-                <p className="text-xl font-black text-slate-100 mt-1">
+                <p className="text-2xl font-black text-slate-100 mt-1">
                   {saldoDetalle.diasAcumulados.toFixed(1)} <span className="text-xs text-slate-400 font-normal">días</span>
                 </p>
-                <p className="text-[10px] text-slate-500 mt-1">2.5 días por mes de servicio</p>
+                <p className="text-[11px] text-slate-500 mt-1">Total ganado por antigüedad</p>
               </div>
 
-              <div className="bg-slate-800/60 border border-slate-700 p-4 rounded-xl">
-                <p className="text-[11px] text-slate-400 uppercase font-semibold">Días Gozados / Aprobados</p>
-                <p className="text-xl font-black text-slate-300 mt-1">
+              <div className="bg-slate-800/60 border border-slate-800 p-4 rounded-2xl">
+                <p className="text-[11px] text-slate-400 uppercase font-semibold">Días Gozados</p>
+                <p className="text-2xl font-black text-slate-300 mt-1">
                   {saldoDetalle.diasGozados} <span className="text-xs text-slate-400 font-normal">días</span>
                 </p>
-                <p className="text-[10px] text-slate-500 mt-1">Descontados de nómina</p>
+                <p className="text-[11px] text-slate-500 mt-1">Descontados formalmente</p>
               </div>
 
-              <div className="bg-slate-800/60 border border-slate-700 p-4 rounded-xl">
-                <p className="text-[11px] text-amber-400 uppercase font-semibold">Días en Solicitud Pendiente</p>
-                <p className="text-xl font-black text-amber-400 mt-1">
+              <div className="bg-slate-800/60 border border-slate-800 p-4 rounded-2xl">
+                <p className="text-[11px] text-amber-400 uppercase font-semibold">En Solicitud</p>
+                <p className="text-2xl font-black text-amber-400 mt-1">
                   {saldoDetalle.diasPendientes} <span className="text-xs text-slate-400 font-normal">días</span>
                 </p>
-                <p className="text-[10px] text-slate-500 mt-1">En espera de autorización</p>
+                <p className="text-[11px] text-slate-500 mt-1">En espera de autorización</p>
               </div>
 
-              <div className="bg-emerald-950/60 border border-emerald-500/40 p-4 rounded-xl">
+              <div className="bg-emerald-950/60 border border-emerald-500/40 p-4 rounded-2xl">
                 <p className="text-[11px] text-emerald-400 uppercase font-bold">Saldo Disponible Real</p>
-                <p className="text-2xl font-black text-emerald-300 mt-1">
+                <p className="text-3xl font-black text-emerald-300 mt-1">
                   {saldoDetalle.saldoDisponible.toFixed(1)} <span className="text-xs text-emerald-400 font-normal">días</span>
                 </p>
-                <p className="text-[10px] text-emerald-400/80 mt-1">Saldo libre para solicitar</p>
+                <p className="text-[11px] text-emerald-400/80 mt-1">Margen libre para programar</p>
               </div>
             </div>
           )}
         </div>
 
         {/* Action & Filter Bar */}
-        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex flex-wrap items-center gap-3 flex-1">
-            <div className="relative flex-1 min-w-[220px]">
+            <div className="relative flex-1 min-w-[240px]">
               <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
                 type="text"
-                placeholder="Buscar por empleado o motivo..."
+                placeholder="Buscar por colaborador, motivo o cédula..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                className="w-full pl-9 pr-4 py-2 bg-slate-50/80 hover:bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-700 placeholder:text-slate-400 focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
               />
             </div>
 
             <select
               value={selectedEmpleadoId || ''}
               onChange={(e) => setSelectedEmpleadoId(e.target.value ? Number(e.target.value) : undefined)}
-              className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-700 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+              className="px-3 py-2 bg-slate-50/80 hover:bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-700 focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
             >
-              <option value="">Todos los Empleados</option>
+              <option value="">Todos los Colaboradores</option>
               {empleados.map((emp) => (
                 <option key={emp.id} value={emp.id}>
                   {emp.nombreCompleto}
@@ -254,7 +266,7 @@ export default function VacacionesPage() {
             <select
               value={selectedEstado || ''}
               onChange={(e) => setSelectedEstado(e.target.value ? Number(e.target.value) : undefined)}
-              className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-700 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+              className="px-3 py-2 bg-slate-50/80 hover:bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-700 focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
             >
               <option value="">Todos los Estados</option>
               <option value={EstadoVacaciones.Pendiente}>Pendiente</option>
@@ -262,11 +274,22 @@ export default function VacacionesPage() {
               <option value={EstadoVacaciones.Rechazada}>Rechazada</option>
               <option value={EstadoVacaciones.Gozada}>Gozada</option>
             </select>
+
+            {hayFiltrosActivos && (
+              <button
+                onClick={resetFiltros}
+                title="Limpiar filtros"
+                className="px-2.5 py-2 text-xs font-medium text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors flex items-center gap-1.5"
+              >
+                <FilterX className="w-3.5 h-3.5 text-slate-500" />
+                <span>Limpiar</span>
+              </button>
+            )}
           </div>
 
           <button
             onClick={() => setIsNuevaModalOpen(true)}
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-xl shadow-sm shadow-blue-600/30 flex items-center justify-center gap-2 transition-all flex-shrink-0"
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-xl shadow-xs flex items-center justify-center gap-2 transition-all flex-shrink-0"
           >
             <Plus className="w-4 h-4" />
             <span>Nueva Solicitud</span>
@@ -274,13 +297,13 @@ export default function VacacionesPage() {
         </div>
 
         {/* Requests Table */}
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
           <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
             <h4 className="text-sm font-bold text-slate-800 flex items-center gap-2">
               <Palmtree className="w-4 h-4 text-blue-600" />
-              Solicitudes de Descanso Remunerado y Vacaciones
+              Solicitudes de Descanso Remunerado
             </h4>
-            <span className="text-xs text-slate-500">
+            <span className="text-xs text-slate-500 font-medium">
               Mostrando {solicitudesFiltradas.length} de {totalSolicitudes} registros
             </span>
           </div>
@@ -293,8 +316,8 @@ export default function VacacionesPage() {
           ) : solicitudesFiltradas.length === 0 ? (
             <div className="p-12 text-center text-slate-500 space-y-2">
               <Palmtree className="w-10 h-10 text-slate-300 mx-auto" />
-              <p className="text-sm font-medium text-slate-700">No hay solicitudes registradas</p>
-              <p className="text-xs text-slate-400">Registre una nueva solicitud de vacaciones.</p>
+              <p className="text-sm font-medium text-slate-700">No se encontraron solicitudes con los filtros aplicados</p>
+              <p className="text-xs text-slate-400">Intente modificar los criterios de búsqueda o registre una nueva solicitud.</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -302,17 +325,17 @@ export default function VacacionesPage() {
                 <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-100">
                   <tr>
                     <th className="px-6 py-3.5">ID</th>
-                    <th className="px-6 py-3.5">Empleado</th>
-                    <th className="px-6 py-3.5">Período de Vacaciones</th>
-                    <th className="px-6 py-3.5">Días Solicitados</th>
+                    <th className="px-6 py-3.5">Colaborador</th>
+                    <th className="px-6 py-3.5">Período Solicitado</th>
+                    <th className="px-6 py-3.5">Días a Descontar</th>
                     <th className="px-6 py-3.5">Motivo / Justificación</th>
                     <th className="px-6 py-3.5">Estado</th>
-                    <th className="px-6 py-3.5 text-right">Acciones de Aprobación</th>
+                    <th className="px-6 py-3.5 text-right">Resolución</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {solicitudesFiltradas.map((solicitud) => (
-                    <tr key={solicitud.id} className="hover:bg-slate-50/80 transition-colors">
+                    <tr key={solicitud.id} className="hover:bg-slate-50/70 transition-colors">
                       <td className="px-6 py-4 font-mono font-semibold text-slate-500">
                         #{solicitud.id}
                       </td>
@@ -343,7 +366,7 @@ export default function VacacionesPage() {
                       <td className="px-6 py-4 text-slate-600 max-w-xs truncate">
                         {solicitud.motivo}
                         {solicitud.observacionesRespuesta && (
-                          <p className="text-[10px] text-slate-400 italic mt-0.5">
+                          <p className="text-[10px] text-slate-400 italic mt-0.5 font-medium">
                             Resp: {solicitud.observacionesRespuesta}
                           </p>
                         )}
@@ -358,14 +381,14 @@ export default function VacacionesPage() {
                           <div className="flex items-center justify-end gap-1.5">
                             <button
                               onClick={() => setSolicitudAAprobar(solicitud)}
-                              className="px-2.5 py-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-lg flex items-center gap-1 transition-colors"
+                              className="px-2.5 py-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200/80 rounded-lg flex items-center gap-1 transition-colors"
                             >
                               <Check className="w-3 h-3" />
                               <span>Aprobar</span>
                             </button>
                             <button
                               onClick={() => setSolicitudARechazar(solicitud)}
-                              className="px-2.5 py-1 text-[11px] font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-lg flex items-center gap-1 transition-colors"
+                              className="px-2.5 py-1 text-[11px] font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200/80 rounded-lg flex items-center gap-1 transition-colors"
                             >
                               <X className="w-3 h-3" />
                               <span>Rechazar</span>

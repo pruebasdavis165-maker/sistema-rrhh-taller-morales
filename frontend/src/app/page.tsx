@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Header from '@/components/Header';
 import { contratosApi, vacacionesApi, empleadosApi, auditoriaApi } from '@/lib/api';
-import { AuditoriaDto, EstadoContrato, EstadoVacaciones } from '@/types';
+import { AuditoriaDto, EstadoContrato, EstadoVacaciones, ContratoDto, SolicitudVacacionesDto } from '@/types';
 import Link from 'next/link';
 import {
   FileText,
@@ -17,7 +17,35 @@ import {
   AlertCircle,
   Wrench,
   Loader2,
+  PieChart as PieIcon,
+  BarChart3,
 } from 'lucide-react';
+import {
+  PieChart,
+  Pie,
+  Cell,
+  ResponsiveContainer,
+  Tooltip,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+} from 'recharts';
+
+const CONTRACT_COLORS = {
+  vigente: '#2563eb', // blue-600
+  finalizado: '#64748b', // slate-500
+  prueba: '#f59e0b', // amber-500
+  otros: '#94a3b8', // slate-400
+};
+
+const VACATION_COLORS = {
+  pendientes: '#f59e0b', // amber-500
+  aprobadas: '#10b981', // emerald-500
+  gozadas: '#3b82f6', // blue-500
+  rechazadas: '#f43f5e', // rose-500
+};
 
 export default function DashboardPage() {
   const [stats, setStats] = useState({
@@ -27,6 +55,8 @@ export default function DashboardPage() {
     auditoriasTotales: 0,
   });
   const [actividades, setActividades] = useState<AuditoriaDto[]>([]);
+  const [contractData, setContractData] = useState<any[]>([]);
+  const [vacationData, setVacationData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -35,17 +65,44 @@ export default function DashboardPage() {
       try {
         const [resEmp, resContratos, resVacaciones, resAudit] = await Promise.all([
           empleadosApi.listar(),
-          contratosApi.listar({ estado: EstadoContrato.Vigente }),
-          vacacionesApi.listar({ estado: EstadoVacaciones.Pendiente }),
+          contratosApi.listar({ pageSize: 100 }),
+          vacacionesApi.listar({ pageSize: 100 }),
           auditoriaApi.listar(8),
         ]);
 
+        const allContratos = resContratos.items || [];
+        const allVacaciones = resVacaciones.items || [];
+
+        const vigentes = allContratos.filter((c) => c.estado === EstadoContrato.Vigente);
+        const finalizados = allContratos.filter((c) => c.estado === EstadoContrato.Finalizado);
+        const prueba = allContratos.filter((c) => c.tipo === 4); // Periodo de prueba
+
         setStats({
           empleados: resEmp.length,
-          contratosVigentes: resContratos.totalItems || resContratos.items.length,
-          vacacionesPendientes: resVacaciones.totalItems || resVacaciones.items.length,
+          contratosVigentes: vigentes.length,
+          vacacionesPendientes: allVacaciones.filter((v) => v.estado === EstadoVacaciones.Pendiente).length,
           auditoriasTotales: resAudit.length,
         });
+
+        // Configuración para el gráfico de contratos
+        setContractData([
+          { name: 'Vigentes', value: vigentes.length || 0, color: CONTRACT_COLORS.vigente },
+          { name: 'Finalizados', value: finalizados.length || 0, color: CONTRACT_COLORS.finalizado },
+          { name: 'En Prueba', value: prueba.length || 0, color: CONTRACT_COLORS.prueba },
+        ]);
+
+        // Configuración para el gráfico de vacaciones
+        const vacPendientes = allVacaciones.filter((v) => v.estado === EstadoVacaciones.Pendiente).length;
+        const vacAprobadas = allVacaciones.filter((v) => v.estado === EstadoVacaciones.Aprobada).length;
+        const vacGozadas = allVacaciones.filter((v) => v.estado === EstadoVacaciones.Gozada).length;
+        const vacRechazadas = allVacaciones.filter((v) => v.estado === EstadoVacaciones.Rechazada).length;
+
+        setVacationData([
+          { estado: 'Pendientes', cantidad: vacPendientes, fill: VACATION_COLORS.pendientes },
+          { estado: 'Aprobadas', cantidad: vacAprobadas, fill: VACATION_COLORS.aprobadas },
+          { estado: 'Gozadas', cantidad: vacGozadas, fill: VACATION_COLORS.gozadas },
+          { estado: 'Rechazadas', cantidad: vacRechazadas, fill: VACATION_COLORS.rechazadas },
+        ]);
 
         setActividades(resAudit);
       } catch (err) {
@@ -107,20 +164,20 @@ export default function DashboardPage() {
 
         {/* KPI Metrics */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+          <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs flex items-center justify-between">
             <div>
               <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Trabajadores</p>
               <h3 className="text-3xl font-extrabold text-slate-800 mt-1">
                 {loading ? <Loader2 className="w-5 h-5 animate-spin text-blue-600" /> : stats.empleados}
               </h3>
-              <p className="text-[11px] text-slate-400 mt-1">Personal en plantilla</p>
+              <p className="text-[11px] text-slate-400 mt-1">Personal en plantilla activa</p>
             </div>
             <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
               <Users className="w-6 h-6" />
             </div>
           </div>
 
-          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+          <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs flex items-center justify-between">
             <div>
               <p className="text-xs font-semibold text-emerald-600 uppercase tracking-wider">Contratos Vigentes</p>
               <h3 className="text-3xl font-extrabold text-slate-800 mt-1">
@@ -133,26 +190,26 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+          <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs flex items-center justify-between">
             <div>
               <p className="text-xs font-semibold text-amber-600 uppercase tracking-wider">Vacaciones Pendientes</p>
               <h3 className="text-3xl font-extrabold text-slate-800 mt-1">
                 {loading ? <Loader2 className="w-5 h-5 animate-spin text-amber-600" /> : stats.vacacionesPendientes}
               </h3>
-              <p className="text-[11px] text-slate-400 mt-1">Requieren saldo suficiente</p>
+              <p className="text-[11px] text-slate-400 mt-1">Requieren revisión de saldo</p>
             </div>
             <div className="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
               <Clock className="w-6 h-6" />
             </div>
           </div>
 
-          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+          <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs flex items-center justify-between">
             <div>
               <p className="text-xs font-semibold text-indigo-600 uppercase tracking-wider">Auditoría Registrada</p>
               <h3 className="text-3xl font-extrabold text-slate-800 mt-1">
                 {loading ? <Loader2 className="w-5 h-5 animate-spin text-indigo-600" /> : stats.auditoriasTotales}
               </h3>
-              <p className="text-[11px] text-slate-400 mt-1">Trazabilidad activa (RF-0006)</p>
+              <p className="text-[11px] text-slate-400 mt-1">Trazabilidad total (RF-0006)</p>
             </div>
             <div className="w-12 h-12 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
               <ShieldCheck className="w-6 h-6" />
@@ -160,19 +217,154 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Grid Layout: Quick Actions + Recent Audit Log */}
+        {/* Sección Visual: Gráficos de Contratos y Vacaciones */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Gráfico de Distribución de Contratos */}
+          <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs space-y-4">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+              <div>
+                <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                  <PieIcon className="w-4 h-4 text-blue-600" />
+                  Distribución de Contratos Laborales
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">Estado actual de la fuerza laboral</p>
+              </div>
+              <span className="text-[11px] font-semibold text-blue-600 bg-blue-50 px-2.5 py-0.5 rounded-full">
+                RF-0005
+              </span>
+            </div>
+
+            {loading ? (
+              <div className="h-56 flex items-center justify-center">
+                <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
+              </div>
+            ) : (
+              <div className="h-56 flex items-center justify-center">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={contractData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={50}
+                      outerRadius={80}
+                      paddingAngle={5}
+                      dataKey="value"
+                    >
+                      {contractData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: '#0f172a',
+                        border: 'none',
+                        borderRadius: '0.75rem',
+                        fontSize: '12px',
+                        color: '#fff',
+                      }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+
+            <div className="flex items-center justify-center gap-6 pt-2 border-t border-slate-100 text-xs text-slate-600">
+              <div className="flex items-center gap-2">
+                <span className="w-3 h-3 rounded-full bg-blue-600"></span>
+                <span>Vigentes</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="w-3 h-3 rounded-full bg-slate-500"></span>
+                <span>Finalizados</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="w-3 h-3 rounded-full bg-amber-500"></span>
+                <span>En Prueba</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Gráfico de Solicitudes de Vacaciones */}
+          <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs space-y-4">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+              <div>
+                <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                  <BarChart3 className="w-4 h-4 text-emerald-600" />
+                  Estado de Solicitudes de Vacaciones
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">Control y flujo de descansos remunerados</p>
+              </div>
+              <span className="text-[11px] font-semibold text-emerald-600 bg-emerald-50 px-2.5 py-0.5 rounded-full">
+                RF-0004
+              </span>
+            </div>
+
+            {loading ? (
+              <div className="h-56 flex items-center justify-center">
+                <Loader2 className="w-6 h-6 animate-spin text-emerald-600" />
+              </div>
+            ) : (
+              <div className="h-56 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={vacationData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                    <XAxis dataKey="estado" tick={{ fontSize: 11, fill: '#64748b' }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fontSize: 11, fill: '#64748b' }} axisLine={false} tickLine={false} allowDecimals={false} />
+                    <Tooltip
+                      cursor={{ fill: '#f8fafc' }}
+                      contentStyle={{
+                        backgroundColor: '#0f172a',
+                        border: 'none',
+                        borderRadius: '0.75rem',
+                        fontSize: '12px',
+                        color: '#fff',
+                      }}
+                    />
+                    <Bar dataKey="cantidad" radius={[6, 6, 0, 0]}>
+                      {vacationData.map((entry, index) => (
+                        <Cell key={`bar-${index}`} fill={entry.fill} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+
+            <div className="flex items-center justify-center gap-4 pt-2 border-t border-slate-100 text-xs text-slate-600">
+              <div className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
+                <span>Pendientes</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+                <span>Aprobadas</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
+                <span>Gozadas</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-rose-500"></span>
+                <span>Rechazadas</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Grid Layout: Operaciones Rápidas + Historial de Auditoría */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Quick Actions Card */}
-          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+          <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs space-y-4">
             <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
               <TrendingUp className="w-4 h-4 text-blue-600" />
-              Operaciones Frecuentes
+              Operaciones Directas
             </h3>
 
             <div className="space-y-2.5">
               <Link
                 href="/contratos"
-                className="p-3 bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-200 rounded-xl flex items-center justify-between group transition-all"
+                className="p-3 bg-slate-50/80 hover:bg-blue-50 border border-slate-200/80 hover:border-blue-200 rounded-xl flex items-center justify-between group transition-all"
               >
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center">
@@ -180,9 +372,9 @@ export default function DashboardPage() {
                   </div>
                   <div>
                     <p className="text-xs font-bold text-slate-800 group-hover:text-blue-700">
-                      Registrar o Validar Contrato
+                      Gestionar Contratos
                     </p>
-                    <p className="text-[11px] text-slate-500">Validación de cruce de fechas</p>
+                    <p className="text-[11px] text-slate-500">Comprobación de fechas sin solapamiento</p>
                   </div>
                 </div>
                 <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-blue-600 transition-transform group-hover:translate-x-0.5" />
@@ -190,7 +382,7 @@ export default function DashboardPage() {
 
               <Link
                 href="/vacaciones"
-                className="p-3 bg-slate-50 hover:bg-emerald-50 border border-slate-200 hover:border-emerald-200 rounded-xl flex items-center justify-between group transition-all"
+                className="p-3 bg-slate-50/80 hover:bg-emerald-50 border border-slate-200/80 hover:border-emerald-200 rounded-xl flex items-center justify-between group transition-all"
               >
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center">
@@ -198,9 +390,9 @@ export default function DashboardPage() {
                   </div>
                   <div>
                     <p className="text-xs font-bold text-slate-800 group-hover:text-emerald-700">
-                      Revisar Solicitudes de Vacaciones
+                      Revisar Vacaciones
                     </p>
-                    <p className="text-[11px] text-slate-500">Comprobación de saldo de días</p>
+                    <p className="text-[11px] text-slate-500">Cálculo de días y aprobación</p>
                   </div>
                 </div>
                 <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-emerald-600 transition-transform group-hover:translate-x-0.5" />
@@ -208,7 +400,7 @@ export default function DashboardPage() {
 
               <Link
                 href="/auditoria"
-                className="p-3 bg-slate-50 hover:bg-indigo-50 border border-slate-200 hover:border-indigo-200 rounded-xl flex items-center justify-between group transition-all"
+                className="p-3 bg-slate-50/80 hover:bg-indigo-50 border border-slate-200/80 hover:border-indigo-200 rounded-xl flex items-center justify-between group transition-all"
               >
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center">
@@ -216,7 +408,7 @@ export default function DashboardPage() {
                   </div>
                   <div>
                     <p className="text-xs font-bold text-slate-800 group-hover:text-indigo-700">
-                      Historial de Auditoría
+                      Bitácora de Auditoría
                     </p>
                     <p className="text-[11px] text-slate-500">Trazabilidad de modificaciones</p>
                   </div>
@@ -227,21 +419,21 @@ export default function DashboardPage() {
           </div>
 
           {/* Recent Audit Activities (RF-0006) */}
-          <div className="lg:col-span-2 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-            <div className="flex items-center justify-between">
+          <div className="lg:col-span-2 bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs space-y-4">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
               <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
                 <ShieldCheck className="w-4 h-4 text-indigo-600" />
                 Registro Reciente de Operaciones y Auditoría (RF-0006)
               </h3>
-              <Link href="/auditoria" className="text-xs text-blue-600 hover:underline font-medium">
-                Ver todo el registro
+              <Link href="/auditoria" className="text-xs text-blue-600 hover:text-blue-700 font-medium hover:underline">
+                Ver historial completo
               </Link>
             </div>
 
             {loading ? (
               <div className="p-8 flex items-center justify-center text-slate-400 gap-2">
                 <Loader2 className="w-5 h-5 animate-spin text-blue-600" />
-                <span className="text-xs">Cargando registros de auditoría...</span>
+                <span className="text-xs">Cargando bitácora de auditoría...</span>
               </div>
             ) : actividades.length === 0 ? (
               <p className="text-xs text-slate-500 py-6 text-center">No hay registros de auditoría aún.</p>
@@ -271,7 +463,7 @@ export default function DashboardPage() {
                       </div>
                     </div>
 
-                    <span className="text-[11px] text-slate-400 whitespace-nowrap">
+                    <span className="text-[11px] text-slate-400 whitespace-nowrap font-medium">
                       {new Date(act.fechaHora).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </span>
                   </div>
