@@ -9,11 +9,19 @@ import {
   Users, 
   ShieldCheck, 
   Wrench, 
-  LogOut 
+  LogOut,
+  UserCog
 } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const { user, logout, isAuthenticated, hasRole } = useAuth();
+
+  // No renderizar el sidebar en la página de login
+  if (pathname === '/login' || !isAuthenticated) {
+    return null;
+  }
 
   const navigation = [
     { name: 'Dashboard', href: '/', icon: LayoutDashboard },
@@ -22,6 +30,26 @@ export default function Sidebar() {
     { name: 'Expedientes Laborales', href: '/empleados', icon: Users, tag: 'RF-0001' },
     { name: 'Trazabilidad y Auditoría', href: '/auditoria', icon: ShieldCheck, tag: 'RF-0006' },
   ];
+
+  // Si es Administrador o RRHH, mostrar gestión de usuarios
+  if (hasRole(['Administrador', 'RRHH'])) {
+    navigation.push({
+      name: 'Gestión de Usuarios',
+      href: '/usuarios',
+      icon: UserCog,
+      tag: 'Seguridad'
+    });
+  }
+
+  const getInitials = (name?: string) => {
+    if (!name) return 'U';
+    return name
+      .split(' ')
+      .map((n) => n[0])
+      .slice(0, 2)
+      .join('')
+      .toUpperCase();
+  };
 
   return (
     <aside className="w-64 bg-slate-900 text-slate-100 flex flex-col flex-shrink-0 min-h-screen border-r border-slate-800">
@@ -77,18 +105,19 @@ export default function Sidebar() {
       {/* User Info / Logout Footer */}
       <div className="p-4 border-t border-slate-800 bg-slate-950/50">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-blue-500/20 border border-blue-400/30 flex items-center justify-center text-blue-300 text-xs font-bold">
-              DM
+          <div className="flex items-center gap-3 overflow-hidden">
+            <div className="w-8 h-8 rounded-full bg-blue-500/20 border border-blue-400/30 flex items-center justify-center text-blue-300 text-xs font-bold shrink-0">
+              {getInitials(user?.nombreCompleto)}
             </div>
             <div className="truncate">
-              <p className="text-xs font-semibold text-white truncate">Davis Muñoz</p>
-              <p className="text-[11px] text-slate-400">Administrador RRHH</p>
+              <p className="text-xs font-semibold text-white truncate">{user?.nombreCompleto || 'Usuario'}</p>
+              <p className="text-[11px] text-blue-400 truncate">{user?.rol || 'Sesión Activa'}</p>
             </div>
           </div>
           <button
+            onClick={logout}
             title="Cerrar sesión"
-            className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-slate-800 rounded-md transition-colors"
+            className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-slate-800 rounded-md transition-colors shrink-0 ml-2"
           >
             <LogOut className="w-4 h-4" />
           </button>

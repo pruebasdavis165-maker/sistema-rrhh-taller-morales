@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using TornoMorales.Application.Common.Security;
 using TornoMorales.Domain.Entities;
 using TornoMorales.Domain.Enums;
 using TornoMorales.Domain.ValueObjects;
@@ -12,10 +13,47 @@ public static class DbInitializer
     {
         await context.Database.EnsureCreatedAsync();
 
-        if (await context.Empleados.AnyAsync())
-            return; // Ya inicializado
+        // 1. Usuarios Iniciales del Sistema (Seguridad / Autenticación)
+        if (!await context.Usuarios.AnyAsync())
+        {
+            var (adminHash, adminSalt) = PasswordHasher.HashPassword("Admin123*");
+            var adminUser = new Usuario(
+                nombreUsuario: "admin",
+                nombreCompleto: "Davis Muñoz",
+                correo: "admin@tornomorales.com",
+                passwordHash: adminHash,
+                passwordSalt: adminSalt,
+                rol: "Administrador"
+            );
 
-        // 1. Empleados de prueba
+            var (rrhhHash, rrhhSalt) = PasswordHasher.HashPassword("Rrhh123*");
+            var rrhhUser = new Usuario(
+                nombreUsuario: "dayerling.rrhh",
+                nombreCompleto: "Dayerling Cardoza",
+                correo: "dayerling.rrhh@tornomorales.com",
+                passwordHash: rrhhHash,
+                passwordSalt: rrhhSalt,
+                rol: "RRHH"
+            );
+
+            var (supervisorHash, supervisorSalt) = PasswordHasher.HashPassword("Taller123*");
+            var supervisorUser = new Usuario(
+                nombreUsuario: "supervisor.taller",
+                nombreCompleto: "Carlos Morales López",
+                correo: "carlos.morales@tornomorales.com",
+                passwordHash: supervisorHash,
+                passwordSalt: supervisorSalt,
+                rol: "Supervisor"
+            );
+
+            await context.Usuarios.AddRangeAsync(adminUser, rrhhUser, supervisorUser);
+            await context.SaveChangesAsync();
+        }
+
+        if (await context.Empleados.AnyAsync())
+            return; // Ya inicializado los datos de empleados/contratos
+
+        // 2. Empleados de prueba
         var emp1 = new Empleado(
             "Carlos Manuel", "Morales López", "001-150885-0021A",
             "+505 8899-1122", "carlos.morales@tornomorales.com",
@@ -43,7 +81,7 @@ public static class DbInitializer
         await context.Empleados.AddRangeAsync(emp1, emp2, emp3, emp4);
         await context.SaveChangesAsync();
 
-        // 2. Expedientes Laborales
+        // 3. Expedientes Laborales
         var exp1 = new ExpedienteLaboral(emp1.Id, "EXP-0001-2024", "Expediente del maestro tornero principal.");
         var exp2 = new ExpedienteLaboral(emp2.Id, "EXP-0002-2025", "Expediente operador de maquinaria fresadora CNC.");
         var exp3 = new ExpedienteLaboral(emp3.Id, "EXP-0003-2026", "Expediente oficial soldador.");
@@ -52,7 +90,7 @@ public static class DbInitializer
         await context.ExpedientesLaborales.AddRangeAsync(exp1, exp2, exp3, exp4);
         await context.SaveChangesAsync();
 
-        // 3. Contratos iniciales válidos
+        // 4. Contratos iniciales válidos
         var cont1_hist = new Contrato(
             exp1.Id, emp1.Id, "CONT-2024-001", TipoContrato.PlazoFijo,
             new PeriodoVigencia(new DateOnly(2024, 1, 1), new DateOnly(2024, 12, 31)),
@@ -79,7 +117,7 @@ public static class DbInitializer
 
         await context.Contratos.AddRangeAsync(cont1_hist, cont1_actual, cont2_actual, cont3_actual);
 
-        // 4. Vacaciones de prueba (RF-0004)
+        // 5. Vacaciones de prueba (RF-0004)
         var vac1 = new SolicitudVacaciones(
             emp1.Id,
             PeriodoVigencia.CrearDeterminado(new DateOnly(2025, 7, 1), new DateOnly(2025, 7, 10)),
@@ -98,9 +136,9 @@ public static class DbInitializer
 
         await context.SolicitudesVacaciones.AddRangeAsync(vac1, vac2);
 
-        // 5. Auditoría Inicial
+        // 6. Auditoría Inicial
         var audit = new Auditoria(
-            "Sistema", "0", "SEED", "SYSTEM_INIT", "Inicialización de base de datos con datos de prueba del Taller de Torno Morales López (Contratos y Vacaciones)."
+            "Sistema", "0", "SEED", "SYSTEM_INIT", "Inicialización de base de datos con usuarios y datos de prueba del Taller de Torno Morales López."
         );
         await context.Auditorias.AddAsync(audit);
 

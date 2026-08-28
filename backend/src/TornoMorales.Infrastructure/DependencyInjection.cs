@@ -31,6 +31,7 @@ public static class DependencyInjection
         services.AddScoped<IEmpleadoRepository, EmpleadoRepository>();
         services.AddScoped<IAuditoriaRepository, AuditoriaRepository>();
         services.AddScoped<ISolicitudVacacionesRepository, SolicitudVacacionesRepository>();
+        services.AddScoped<IUsuarioRepository, UsuarioRepository>();
         services.AddScoped<IUnitOfWork, UnitOfWork>();
 
         return services;

@@ -177,3 +177,51 @@ export interface PagedResult<T> {
   hasPreviousPage: boolean;
   hasNextPage: boolean;
 }
+
+// ──────────────────────────────────────────────────────────
+// Auth & Usuarios (Fase 3)
+// ──────────────────────────────────────────────────────────
+
+export type RolUsuario = 'Administrador' | 'RRHH' | 'Supervisor';
+
+export interface LoginRequest {
+  nombreUsuario: string;
+  password: string;
+}
+
+export interface LoginResponse {
+  token: string;
+  nombreUsuario: string;
+  nombreCompleto: string;
+  correo: string;
+  rol: RolUsuario;
+  expiracion: string;
+}
+
+export interface UsuarioDto {
+  id: number;
+  nombreUsuario: string;
+  nombreCompleto: string;
+  correo: string;
+  rol: RolUsuario;
+  activo: boolean;
+  fechaCreacion: string;
+  ultimoAcceso?: string;
+}
+
+export interface CrearUsuarioRequest {
+  nombreUsuario: string;
+  nombreCompleto: string;
+  correo: string;
+  password: string;
+  rol: RolUsuario;
+}
+
+export interface ActualizarUsuarioRequest {
+  nombreCompleto: string;
+  correo: string;
+  rol: RolUsuario;
+  activo: boolean;
+  nuevoPassword?: string;
+}
+

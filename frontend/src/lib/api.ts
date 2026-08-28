@@ -14,9 +14,20 @@ import {
   EmpleadoDto,
   AuditoriaDto,
   PagedResult,
+  LoginRequest,
+  LoginResponse,
+  UsuarioDto,
+  CrearUsuarioRequest,
+  ActualizarUsuarioRequest,
 } from '@/types';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5076/api';
+
+/** Obtiene el token JWT del localStorage (solo client-side) */
+function getAuthToken(): string | null {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem('tm_token');
+}
 
 export class ApiError extends Error {
   status: number;
@@ -32,10 +43,14 @@ export class ApiError extends Error {
 
 async function request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const url = `${API_BASE_URL}${endpoint}`;
-  const headers = {
+  const token = getAuthToken();
+  const headers: Record<string, string> = {
     'Content-Type': 'application/json',
-    ...(options.headers || {}),
+    ...(options.headers as Record<string, string> || {}),
   };
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
 
   try {
     const response = await fetch(url, { ...options, headers });
@@ -64,6 +79,28 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
     throw new ApiError('No se pudo conectar con el servidor backend (.NET)', 0, null);
   }
 }
+
+export const authApi = {
+  login: (data: LoginRequest) =>
+    request<LoginResponse>('/auth/login', { method: 'POST', body: JSON.stringify(data) }),
+
+  perfil: () => request<UsuarioDto>('/auth/perfil'),
+};
+
+export const usuariosApi = {
+  listar: () => request<UsuarioDto[]>('/usuarios'),
+
+  obtenerPorId: (id: number) => request<UsuarioDto>(`/usuarios/${id}`),
+
+  crear: (data: CrearUsuarioRequest) =>
+    request<UsuarioDto>('/usuarios', { method: 'POST', body: JSON.stringify(data) }),
+
+  actualizar: (id: number, data: ActualizarUsuarioRequest) =>
+    request<UsuarioDto>(`/usuarios/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+
+  eliminar: (id: number) =>
+    request<void>(`/usuarios/${id}`, { method: 'DELETE' }),
+};
 
 export const contratosApi = {
   listar: (params?: { empleadoId?: number; estado?: number; tipo?: number; page?: number; pageSize?: number }) => {

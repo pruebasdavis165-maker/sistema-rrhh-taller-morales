@@ -14,6 +14,7 @@ public class TornoDbContext : DbContext
     public DbSet<Empleado> Empleados => Set<Empleado>();
     public DbSet<Auditoria> Auditorias => Set<Auditoria>();
     public DbSet<SolicitudVacaciones> SolicitudesVacaciones => Set<SolicitudVacaciones>();
+    public DbSet<Usuario> Usuarios => Set<Usuario>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
