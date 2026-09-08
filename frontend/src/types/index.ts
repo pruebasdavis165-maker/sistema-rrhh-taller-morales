@@ -225,3 +225,94 @@ export interface ActualizarUsuarioRequest {
   nuevoPassword?: string;
 }
 
+export interface SesionUsuarioDto {
+  id: number;
+  nombreUsuario: string;
+  nombreCompleto: string;
+  correo: string;
+  rol: RolUsuario;
+  expiracionToken: string;
+  totpHabilitado?: boolean;
+}
+
+export interface LoginResultDto {
+  requiereTotp?: boolean;
+  usuarioId?: number;
+  mensaje?: string;
+  // Si no requiere TOTP, viene SesionUsuarioDto directamente
+  id?: number;
+  nombreUsuario?: string;
+  nombreCompleto?: string;
+  correo?: string;
+  rol?: RolUsuario;
+  expiracionToken?: string;
+}
+
+export interface VerificarTotpRequest {
+  usuarioId: number;
+  codigo: string;
+}
+
+export interface ConfigurarTotpResponse {
+  secretoBase32: string;
+  provisioningUri: string;
+}
+
+export interface CalculoPreavisoResponse {
+  empleadoId: number;
+  nombreEmpleado: string;
+  aniosServicio: number;
+  diasPreavisoObligatorio: number;
+  indemnizacionAntiguedadEstimada: number;
+  baseLegal: string;
+}
+
+// ──────────────────────────────────────────────────────────
+// Analítica Avanzada y Alertas Preventivas (Fase 2)
+// ──────────────────────────────────────────────────────────
+
+export interface AlertaContratacionDto {
+  contratoId: number;
+  empleadoId: number;
+  codigoContrato: string;
+  nombreEmpleado: string;
+  cargo: string;
+  tipoContrato: string;
+  fechaInicio: string;
+  fechaFin?: string;
+  diasRestantes: number;
+  nivelAlerta: 'Critico' | 'Advertencia' | 'Informativo';
+  mensaje: string;
+}
+
+export interface DistribucionEspecialidadDto {
+  cargo: string;
+  cantidad: number;
+  porcentaje: number;
+}
+
+export interface ComparativaPlanillaMensualDto {
+  mes: string;
+  totalPlanillaCordobas: number;
+  totalTrabajadores: number;
+}
+
+export interface MetricaAusentismoDto {
+  mes: string;
+  diasAusenciaVacaciones: number;
+  solicitudesAprobadas: number;
+}
+
+export interface DashboardAnaliticaDto {
+  totalEmpleados: number;
+  contratosVigentes: number;
+  vacacionesPendientes: number;
+  costoPlanillaMensualActual: number;
+  alertasContratacion: AlertaContratacionDto[];
+  distribucionEspecialidad: DistribucionEspecialidadDto[];
+  comparativaPlanilla: ComparativaPlanillaMensualDto[];
+  metricasAusentismo: MetricaAusentismoDto[];
+}
+
+
+

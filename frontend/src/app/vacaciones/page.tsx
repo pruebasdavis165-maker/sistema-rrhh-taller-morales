@@ -8,6 +8,7 @@ import AprobarVacacionesModal from '@/components/vacaciones/AprobarVacacionesMod
 import RechazarVacacionesModal from '@/components/vacaciones/RechazarVacacionesModal';
 import { vacacionesApi, empleadosApi } from '@/lib/api';
 import { SolicitudVacacionesDto, EmpleadoDto, SaldoVacacionesDto, EstadoVacaciones } from '@/types';
+import { useAuth } from '@/context/AuthContext';
 import {
   Palmtree,
   Plus,
@@ -25,6 +26,7 @@ import {
 } from 'lucide-react';
 
 export default function VacacionesPage() {
+  const { hasRole } = useAuth();
   const [solicitudes, setSolicitudes] = useState<SolicitudVacacionesDto[]>([]);
   const [empleados, setEmpleados] = useState<EmpleadoDto[]>([]);
   const [selectedSaldoEmpleadoId, setSelectedSaldoEmpleadoId] = useState<number | null>(null);
@@ -378,22 +380,28 @@ export default function VacacionesPage() {
 
                       <td className="px-6 py-4 text-right space-x-2">
                         {solicitud.estado === EstadoVacaciones.Pendiente ? (
-                          <div className="flex items-center justify-end gap-1.5">
-                            <button
-                              onClick={() => setSolicitudAAprobar(solicitud)}
-                              className="px-2.5 py-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200/80 rounded-lg flex items-center gap-1 transition-colors"
-                            >
-                              <Check className="w-3 h-3" />
-                              <span>Aprobar</span>
-                            </button>
-                            <button
-                              onClick={() => setSolicitudARechazar(solicitud)}
-                              className="px-2.5 py-1 text-[11px] font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200/80 rounded-lg flex items-center gap-1 transition-colors"
-                            >
-                              <X className="w-3 h-3" />
-                              <span>Rechazar</span>
-                            </button>
-                          </div>
+                          hasRole(['Administrador', 'RRHH']) ? (
+                            <div className="flex items-center justify-end gap-1.5">
+                              <button
+                                onClick={() => setSolicitudAAprobar(solicitud)}
+                                className="px-2.5 py-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200/80 rounded-lg flex items-center gap-1 transition-colors cursor-pointer"
+                              >
+                                <Check className="w-3 h-3" />
+                                <span>Aprobar</span>
+                              </button>
+                              <button
+                                onClick={() => setSolicitudARechazar(solicitud)}
+                                className="px-2.5 py-1 text-[11px] font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200/80 rounded-lg flex items-center gap-1 transition-colors cursor-pointer"
+                              >
+                                <X className="w-3 h-3" />
+                                <span>Rechazar</span>
+                              </button>
+                            </div>
+                          ) : (
+                            <span className="px-2 py-0.5 bg-amber-50 text-amber-700 border border-amber-200 rounded-md font-medium text-[11px]">
+                              En Revisión
+                            </span>
+                          )
                         ) : (
                           <span className="text-[11px] text-slate-400 font-medium">Procesada</span>
                         )}

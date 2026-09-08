@@ -49,6 +49,8 @@ public class Contrato : Entity<int>, IAggregateRoot
         if (string.IsNullOrWhiteSpace(cargo))
             throw new ReglaNegocioException("El cargo asignado en el contrato es obligatorio.");
 
+        ValidarReglasLey185(tipo, periodo);
+
         ExpedienteLaboralId = expedienteLaboralId;
         EmpleadoId = empleadoId;
         CodigoContrato = codigoContrato.Trim().ToUpperInvariant();
@@ -74,12 +76,38 @@ public class Contrato : Entity<int>, IAggregateRoot
         if (string.IsNullOrWhiteSpace(nuevoCargo))
             throw new ReglaNegocioException("El cargo no puede quedar vacío.");
 
+        ValidarReglasLey185(nuevoTipo, nuevoPeriodo);
+
         Tipo = nuevoTipo;
         Periodo = nuevoPeriodo ?? throw new ArgumentNullException(nameof(nuevoPeriodo));
         Salario = nuevoSalario ?? throw new ArgumentNullException(nameof(nuevoSalario));
         Cargo = nuevoCargo.Trim();
         Clausulas = nuevasClausulas?.Trim();
         FechaModificacion = DateTime.UtcNow;
+    }
+
+    private static void ValidarReglasLey185(TipoContrato tipo, PeriodoVigencia periodo)
+    {
+        if (periodo == null)
+            throw new ArgumentNullException(nameof(periodo));
+
+        // Ley No. 185 (Código del Trabajo de Nicaragua) - Art. 28:
+        // El período de prueba no puede exceder de 30 días.
+        if (tipo == TipoContrato.PeriodoPrueba)
+        {
+            if (periodo.EsIndefinido)
+                throw new ReglaNegocioException("Un contrato en período de prueba debe tener una fecha de finalización definida (máximo 30 días según Art. 28 Ley 185).");
+
+            var duracion = periodo.DuracionEnDias();
+            if (duracion.HasValue && duracion.Value > 30)
+                throw new ReglaNegocioException($"El período de prueba ({duracion.Value} días) excede el límite legal de 30 días estipulado en el Art. 28 de la Ley No. 185.");
+        }
+
+        // Contratos por plazo fijo deben tener fecha fin
+        if (tipo == TipoContrato.PlazoFijo && periodo.EsIndefinido)
+        {
+            throw new ReglaNegocioException("Un contrato a plazo fijo requiere obligatoriamente una fecha de terminación definida.");
+        }
     }
 
     public void Finalizar(DateOnly fechaTerminacion, string motivo)
@@ -124,8 +152,6 @@ public class Contrato : Entity<int>, IAggregateRoot
 
     public bool ParticipaEnValidacionDeSolapamiento()
     {
-        // Solo los contratos activos, vigentes, borradores o concluidos participan según sus fechas.
-        // Los contratos cancelados/anulados no ocupan rango de vigencia.
         return Estado != EstadoContrato.Cancelado;
     }
 }

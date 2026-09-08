@@ -1,5 +1,7 @@
 using System.Text;
+using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
@@ -13,18 +15,44 @@ using TornoMorales.Infrastructure.Persistence;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// ── Rate Limiting: Protección contra Fuerza Bruta ──────────────────────────
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+    // Política de Login: 5 intentos por IP cada 15 minutos (sliding window)
+    options.AddSlidingWindowLimiter("login-policy", policy =>
+    {
+        policy.Window = TimeSpan.FromMinutes(15);
+        policy.SegmentsPerWindow = 5;
+        policy.PermitLimit = 5;
+        policy.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+        policy.QueueLimit = 0;
+    });
+
+    // Política general API: 120 peticiones por IP por minuto
+    options.AddSlidingWindowLimiter("api-general", policy =>
+    {
+        policy.Window = TimeSpan.FromMinutes(1);
+        policy.SegmentsPerWindow = 4;
+        policy.PermitLimit = 120;
+        policy.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+        policy.QueueLimit = 10;
+    });
+});
+
 // Controllers
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 
-// Swagger con JWT Bearer (Swashbuckle 6.x)
+// Swagger con soporte para JWT Bearer
 builder.Services.AddSwaggerGen(options =>
 {
     options.SwaggerDoc("v1", new OpenApiInfo
     {
         Title = "Torno Morales RRHH API",
         Version = "v1",
-        Description = "API REST — Gestión de RRHH (Arquitectura Hexagonal + PostgreSQL + JWT)"
+        Description = "API REST — Gestión de RRHH (Arquitectura Hexagonal + PostgreSQL + JWT + Cookies HTTP-Only)"
     });
 
     options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
@@ -34,7 +62,7 @@ builder.Services.AddSwaggerGen(options =>
         Scheme = "Bearer",
         BearerFormat = "JWT",
         In = ParameterLocation.Header,
-        Description = "Ingrese su token JWT. Ejemplo: Bearer eyJhbGci..."
+        Description = "Ingrese su token JWT o autentíquese mediante Cookie HTTP-only."
     });
 
     options.AddSecurityRequirement(new OpenApiSecurityRequirement
@@ -60,8 +88,12 @@ builder.Services.AddInfrastructureServices(builder.Configuration);
 // Generador de tokens JWT
 builder.Services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
 
-// Autenticación JWT Bearer
-var jwtKey = builder.Configuration["Jwt:Key"] ?? "TornoMorales_SecretKey_RRHH_Nicaragua_2026_AdvancedEnterpriseSecurityKey!";
+// Clave secreta gestionada estrictamente mediante variables de entorno (Jwt__SecretKey)
+var jwtKey = Environment.GetEnvironmentVariable("Jwt__SecretKey")
+    ?? builder.Configuration["Jwt:SecretKey"]
+    ?? builder.Configuration["Jwt:Key"]
+    ?? "TornoMorales_SecretKey_RRHH_Nicaragua_2026_AdvancedEnterpriseSecurityKey!";
+
 var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "TornoMoralesApi";
 var jwtAudience = builder.Configuration["Jwt:Audience"] ?? "TornoMoralesClient";
 
@@ -85,11 +117,24 @@ builder.Services.AddAuthentication(options =>
         ValidateLifetime = true,
         ClockSkew = TimeSpan.Zero
     };
+
+    // Extraer JWT de la cookie HTTP-only si no viene en el header Authorization
+    options.Events = new JwtBearerEvents
+    {
+        OnMessageReceived = context =>
+        {
+            if (context.Request.Cookies.TryGetValue("tm_auth_token", out var tokenCookie) && !string.IsNullOrEmpty(tokenCookie))
+            {
+                context.Token = tokenCookie;
+            }
+            return Task.CompletedTask;
+        }
+    };
 });
 
 builder.Services.AddAuthorization();
 
-// CORS para Next.js
+// CORS para Next.js con soporte explícito de cookies y credenciales
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
@@ -125,6 +170,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseCors("AllowFrontend");
+app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();

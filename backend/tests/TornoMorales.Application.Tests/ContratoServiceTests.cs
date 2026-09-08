@@ -272,4 +272,17 @@ public class ContratoServiceTests
         Assert.Equal("Renuncia voluntaria del trabajador.", resultado.MotivoCancelacionOFin);
         Assert.Contains(_auditoriaRepo.Auditorias, a => a.Accion == "FINALIZAR");
     }
+
+    [Fact]
+    public async Task CalcularPreavisoEmpleadoAsync_RetornaCalculoSegunLey185()
+    {
+        // Act
+        var preaviso = await _service.CalcularPreavisoEmpleadoAsync(1);
+
+        // Assert
+        Assert.NotNull(preaviso);
+        Assert.Equal(1, preaviso.EmpleadoId);
+        Assert.True(preaviso.DiasPreavisoObligatorio >= 15);
+        Assert.Contains("Ley No. 185", preaviso.BaseLegal);
+    }
 }

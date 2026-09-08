@@ -19,7 +19,12 @@ public class JwtTokenGenerator : IJwtTokenGenerator
 
     public (string Token, DateTime Expiracion) GenerarToken(Usuario usuario)
     {
-        var secretKey = _configuration["Jwt:Key"] ?? "TornoMorales_SecretKey_RRHH_Nicaragua_2026_AdvancedEnterpriseSecurityKey!";
+        // Clave secreta robusta: Se prioriza la variable de entorno Jwt__SecretKey o Jwt:SecretKey
+        var secretKey = Environment.GetEnvironmentVariable("Jwt__SecretKey")
+            ?? _configuration["Jwt:SecretKey"]
+            ?? _configuration["Jwt:Key"]
+            ?? "TornoMorales_SecretKey_RRHH_Nicaragua_2026_AdvancedEnterpriseSecurityKey!";
+
         var issuer = _configuration["Jwt:Issuer"] ?? "TornoMoralesApi";
         var audience = _configuration["Jwt:Audience"] ?? "TornoMoralesClient";
         var expirationHours = int.TryParse(_configuration["Jwt:ExpirationHours"], out var hours) ? hours : 8;

@@ -6,6 +6,7 @@ import {
   CancelarContratoRequest,
   ValidarSolapamientoRequest,
   ValidacionSolapamientoResponse,
+  CalculoPreavisoResponse,
   SolicitudVacacionesDto,
   CrearSolicitudVacacionesRequest,
   AprobarVacacionesRequest,
@@ -16,18 +17,18 @@ import {
   PagedResult,
   LoginRequest,
   LoginResponse,
+  SesionUsuarioDto,
   UsuarioDto,
   CrearUsuarioRequest,
   ActualizarUsuarioRequest,
+  DashboardAnaliticaDto,
+  AlertaContratacionDto,
+  LoginResultDto,
+  VerificarTotpRequest,
+  ConfigurarTotpResponse,
 } from '@/types';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5076/api';
-
-/** Obtiene el token JWT del localStorage (solo client-side) */
-function getAuthToken(): string | null {
-  if (typeof window === 'undefined') return null;
-  return localStorage.getItem('tm_token');
-}
 
 export class ApiError extends Error {
   status: number;
@@ -41,19 +42,26 @@ export class ApiError extends Error {
   }
 }
 
+/**
+ * Cliente HTTP unificado con inclusión automática de cookies (credentials: 'include')
+ * para autenticación basada en Cookie HTTP-Only / SameSite=Strict
+ */
 async function request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const url = `${API_BASE_URL}${endpoint}`;
-  const token = getAuthToken();
+  
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     ...(options.headers as Record<string, string> || {}),
   };
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
+
+  const fetchOptions: RequestInit = {
+    ...options,
+    headers,
+    credentials: 'include', // Clave: Envía y recibe cookies HTTP-only de sesión
+  };
 
   try {
-    const response = await fetch(url, { ...options, headers });
+    const response = await fetch(url, fetchOptions);
     
     if (!response.ok) {
       let errorData = null;
@@ -82,7 +90,25 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
 
 export const authApi = {
   login: (data: LoginRequest) =>
-    request<LoginResponse>('/auth/login', { method: 'POST', body: JSON.stringify(data) }),
+    request<LoginResultDto>('/auth/login', { method: 'POST', body: JSON.stringify(data) }),
+
+  verificarTotp: (data: VerificarTotpRequest) =>
+    request<SesionUsuarioDto>('/auth/verificar-totp', { method: 'POST', body: JSON.stringify(data) }),
+
+  configurarTotp: () =>
+    request<ConfigurarTotpResponse>('/auth/configurar-totp', { method: 'POST' }),
+
+  confirmarTotp: (codigo: string) =>
+    request<{ mensaje: string }>('/auth/confirmar-totp', { method: 'POST', body: JSON.stringify(codigo) }),
+
+  deshabilitarTotp: () =>
+    request<{ mensaje: string }>('/auth/deshabilitar-totp', { method: 'POST' }),
+
+  logout: () =>
+    request<{ mensaje: string }>('/auth/logout', { method: 'POST' }),
+
+  refresh: () =>
+    request<SesionUsuarioDto>('/auth/refresh', { method: 'POST' }),
 
   perfil: () => request<UsuarioDto>('/auth/perfil'),
 };
@@ -146,6 +172,9 @@ export const contratosApi = {
       method: 'PATCH',
       body: JSON.stringify(data),
     }),
+
+  calcularPreaviso: (empleadoId: number) =>
+    request<CalculoPreavisoResponse>(`/contratos/empleado/${empleadoId}/preaviso`),
 };
 
 export const vacacionesApi = {
@@ -207,5 +236,10 @@ export const sistemaApi = {
       return false;
     }
   },
+};
+
+export const dashboardApi = {
+  obtenerAnalitica: () => request<DashboardAnaliticaDto>('/dashboard/analitica'),
+  obtenerAlertas: () => request<AlertaContratacionDto[]>('/dashboard/alertas'),
 };
 

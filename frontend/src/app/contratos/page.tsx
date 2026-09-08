@@ -44,7 +44,7 @@ export default function ContratosPage() {
         contratosApi.listar({
           empleadoId: selectedEmpleadoId,
           estado: selectedEstado,
-          tipo: selectedTipo,
+          tipo: selectedTipo,   
           pageSize: 100,
         }),
         empleadosApi.listar(),

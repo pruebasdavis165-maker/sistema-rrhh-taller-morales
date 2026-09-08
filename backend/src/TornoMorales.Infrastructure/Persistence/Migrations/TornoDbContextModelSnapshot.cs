@@ -316,6 +316,15 @@ namespace TornoMorales.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(50)")
                         .HasDefaultValue("RRHH");
 
+                    b.Property<bool>("TotpHabilitado")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
+                    b.Property<string>("TotpSecret")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
                     b.Property<DateTime?>("UltimoAcceso")
                         .HasColumnType("timestamp with time zone");
 

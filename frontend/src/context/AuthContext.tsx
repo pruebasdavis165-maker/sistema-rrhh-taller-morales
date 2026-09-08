@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { LoginRequest, LoginResponse, RolUsuario } from '@/types';
+import { LoginRequest, SesionUsuarioDto, RolUsuario } from '@/types';
 import { authApi } from '@/lib/api';
 
 interface AuthContextType {
@@ -12,80 +12,118 @@ interface AuthContextType {
     correo: string;
     rol: RolUsuario;
   } | null;
-  token: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (credentials: LoginRequest) => Promise<void>;
-  logout: () => void;
+  login: (credentials: LoginRequest) => Promise<{ requiereTotp: boolean; usuarioId?: number }>;
+  verificarTotp: (usuarioId: number, codigo: string) => Promise<void>;
+  logout: () => Promise<void>;
   hasRole: (allowedRoles: RolUsuario[]) => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const TOKEN_KEY = 'tm_token';
-const USER_KEY = 'tm_user';
+const USER_SESSION_KEY = 'tm_user_session';
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthContextType['user']>(null);
-  const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
   const pathname = usePathname();
 
+  // Validar sesión contra el servidor al cargar la aplicación
   useEffect(() => {
-    // Restaurar sesión desde localStorage
-    const savedToken = localStorage.getItem(TOKEN_KEY);
-    const savedUser = localStorage.getItem(USER_KEY);
-
-    if (savedToken && savedUser) {
+    async function verificarSesion() {
       try {
-        setToken(savedToken);
-        setUser(JSON.parse(savedUser));
+        // Intenta obtener el perfil del usuario autenticado mediante la Cookie HTTP-only
+        const perfil = await authApi.perfil();
+        const userData = {
+          nombreUsuario: perfil.nombreUsuario,
+          nombreCompleto: perfil.nombreCompleto,
+          correo: perfil.correo,
+          rol: perfil.rol,
+        };
+        setUser(userData);
+        localStorage.setItem(USER_SESSION_KEY, JSON.stringify(userData));
       } catch (err) {
-        localStorage.removeItem(TOKEN_KEY);
-        localStorage.removeItem(USER_KEY);
+        // Si no responde el endpoint de perfil, verifica si había sesión previa en cache
+        const cached = localStorage.getItem(USER_SESSION_KEY);
+        if (cached) {
+          try {
+            setUser(JSON.parse(cached));
+          } catch {
+            localStorage.removeItem(USER_SESSION_KEY);
+            setUser(null);
+          }
+        } else {
+          setUser(null);
+        }
+      } finally {
+        setIsLoading(false);
       }
     }
-    setIsLoading(false);
+
+    verificarSesion();
   }, []);
 
+  // Guarda de navegación reactiva
   useEffect(() => {
     if (isLoading) return;
 
     const isLoginPage = pathname === '/login';
 
-    if (!token && !isLoginPage) {
+    if (!user && !isLoginPage) {
       router.replace('/login');
-    } else if (token && isLoginPage) {
+    } else if (user && isLoginPage) {
       router.replace('/');
     }
-  }, [token, isLoading, pathname, router]);
+  }, [user, isLoading, pathname, router]);
 
   const login = async (credentials: LoginRequest) => {
-    const response: LoginResponse = await authApi.login(credentials);
-    
+    const res = await authApi.login(credentials);
+
+    if (res.requiereTotp) {
+      return { requiereTotp: true, usuarioId: res.usuarioId };
+    }
+
     const userData = {
-      nombreUsuario: response.nombreUsuario,
-      nombreCompleto: response.nombreCompleto,
-      correo: response.correo,
-      rol: response.rol,
+      nombreUsuario: res.nombreUsuario!,
+      nombreCompleto: res.nombreCompleto!,
+      correo: res.correo!,
+      rol: res.rol!,
     };
 
-    setToken(response.token);
     setUser(userData);
+    localStorage.setItem(USER_SESSION_KEY, JSON.stringify(userData));
+    router.push('/');
 
-    localStorage.setItem(TOKEN_KEY, response.token);
-    localStorage.setItem(USER_KEY, JSON.stringify(userData));
+    return { requiereTotp: false };
+  };
 
+  const verificarTotp = async (usuarioId: number, codigo: string) => {
+    const sesion = await authApi.verificarTotp({ usuarioId, codigo });
+
+    const userData = {
+      nombreUsuario: sesion.nombreUsuario,
+      nombreCompleto: sesion.nombreCompleto,
+      correo: sesion.correo,
+      rol: sesion.rol,
+    };
+
+    setUser(userData);
+    localStorage.setItem(USER_SESSION_KEY, JSON.stringify(userData));
     router.push('/');
   };
 
-  const logout = () => {
-    setToken(null);
-    setUser(null);
-    localStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem(USER_KEY);
-    router.push('/login');
+  const logout = async () => {
+    try {
+      await authApi.logout();
+    } catch {
+      // Ignorar fallo de red en logout
+    } finally {
+      setUser(null);
+      localStorage.removeItem(USER_SESSION_KEY);
+      router.push('/login');
+    }
   };
 
   const hasRole = (allowedRoles: RolUsuario[]): boolean => {
@@ -97,10 +135,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     <AuthContext.Provider
       value={{
         user,
-        token,
-        isAuthenticated: !!token,
+        isAuthenticated: !!user,
         isLoading,
         login,
+        verificarTotp,
         logout,
         hasRole,
       }}

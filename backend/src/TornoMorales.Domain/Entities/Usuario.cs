@@ -14,6 +14,10 @@ public class Usuario : Entity<int>
     public DateTime FechaCreacion { get; private set; }
     public DateTime? UltimoAcceso { get; private set; }
 
+    // ── 2FA TOTP (RFC 6238) ────────────────────────────────────────────────
+    public string? TotpSecret { get; private set; }
+    public bool TotpHabilitado { get; private set; }
+
     private Usuario() { } // EF Core
 
     public Usuario(
@@ -41,6 +45,7 @@ public class Usuario : Entity<int>
         Rol = rol;
         Activo = true;
         FechaCreacion = DateTime.UtcNow;
+        TotpHabilitado = false;
     }
 
     public void ActualizarPerfil(string nombreCompleto, string correo, string rol)
@@ -68,4 +73,20 @@ public class Usuario : Entity<int>
     {
         UltimoAcceso = DateTime.UtcNow;
     }
+
+    // ── Métodos de dominio para gestión de TOTP ───────────────────────────
+    public void HabilitarTotp(string secret)
+    {
+        if (string.IsNullOrWhiteSpace(secret))
+            throw new ArgumentException("El secreto TOTP es obligatorio.", nameof(secret));
+        TotpSecret = secret;
+        TotpHabilitado = true;
+    }
+
+    public void DeshabilitarTotp()
+    {
+        TotpSecret = null;
+        TotpHabilitado = false;
+    }
 }
+

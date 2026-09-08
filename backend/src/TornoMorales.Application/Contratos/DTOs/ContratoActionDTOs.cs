@@ -28,3 +28,13 @@ public class ValidacionSolapamientoResponse
     public DateOnly? FechaInicioConflicto { get; set; }
     public DateOnly? FechaFinConflicto { get; set; }
 }
+
+public class CalculoPreavisoResponse
+{
+    public int EmpleadoId { get; set; }
+    public string NombreEmpleado { get; set; } = string.Empty;
+    public decimal AniosServicio { get; set; }
+    public int DiasPreavisoObligatorio { get; set; }
+    public decimal IndemnizacionAntiguedadEstimada { get; set; }
+    public string BaseLegal { get; set; } = "Ley No. 185 (Código del Trabajo de Nicaragua) - Art. 45 y Art. 48";
+}

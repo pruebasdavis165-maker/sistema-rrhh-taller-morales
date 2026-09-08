@@ -125,4 +125,16 @@ public class ContratosController : ControllerBase
         var cancelado = await _contratoService.CancelarAsync(id, request, usuario, ct);
         return Ok(cancelado);
     }
+
+    /// <summary>
+    /// Calcula el preaviso obligatorio y la indemnización estimada por antigüedad (Ley No. 185 Nicaragua)
+    /// </summary>
+    [HttpGet("empleado/{empleadoId:int}/preaviso")]
+    [ProducesResponseType(typeof(CalculoPreavisoResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<CalculoPreavisoResponse>> CalcularPreaviso(int empleadoId, CancellationToken ct = default)
+    {
+        var resultado = await _contratoService.CalcularPreavisoEmpleadoAsync(empleadoId, ct);
+        return Ok(resultado);
+    }
 }

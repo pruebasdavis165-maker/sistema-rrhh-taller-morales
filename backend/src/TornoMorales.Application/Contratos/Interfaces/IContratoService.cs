@@ -13,4 +13,5 @@ public interface IContratoService
     Task<IReadOnlyList<ContratoDto>> ObtenerPorEmpleadoIdAsync(int empleadoId, CancellationToken ct = default);
     Task<PagedResult<ContratoDto>> ListarAsync(int? empleadoId = null, int? estado = null, int pageNumber = 1, int pageSize = 20, CancellationToken ct = default);
     Task<ValidacionSolapamientoResponse> ValidarSolapamientoAsync(ValidarSolapamientoRequest request, CancellationToken ct = default);
+    Task<CalculoPreavisoResponse> CalcularPreavisoEmpleadoAsync(int empleadoId, CancellationToken ct = default);
 }

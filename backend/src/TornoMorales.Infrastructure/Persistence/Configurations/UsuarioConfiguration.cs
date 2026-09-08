@@ -53,5 +53,13 @@ public class UsuarioConfiguration : IEntityTypeConfiguration<Usuario>
 
         builder.Property(u => u.UltimoAcceso)
             .IsRequired(false);
+
+        builder.Property(u => u.TotpSecret)
+            .HasMaxLength(128)
+            .IsRequired(false);
+
+        builder.Property(u => u.TotpHabilitado)
+            .IsRequired()
+            .HasDefaultValue(false);
     }
 }

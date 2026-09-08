@@ -255,4 +255,25 @@ public class ContratoService : IContratoService
             };
         }
     }
+
+    public async Task<CalculoPreavisoResponse> CalcularPreavisoEmpleadoAsync(int empleadoId, CancellationToken ct = default)
+    {
+        var empleado = await _empleadoRepository.ObtenerPorIdAsync(empleadoId, ct)
+            ?? throw new ReglaNegocioException($"No se encontró el empleado con ID {empleadoId}.");
+
+        var contratos = await _contratoRepository.ObtenerPorEmpleadoIdAsync(empleadoId, ct);
+        var aniosAntiguedad = CalculadorLaboralLey185.CalcularAntiguedadTotalEnAnios(empleado, contratos);
+        var diasPreaviso = CalculadorLaboralLey185.CalcularDiasPreaviso(aniosAntiguedad);
+        var indemnizacion = CalculadorLaboralLey185.CalcularIndemnizacionAntiguedadArt45(empleado.SalarioBase, aniosAntiguedad);
+
+        return new CalculoPreavisoResponse
+        {
+            EmpleadoId = empleado.Id,
+            NombreEmpleado = empleado.NombreCompleto,
+            AniosServicio = Math.Round(aniosAntiguedad, 2),
+            DiasPreavisoObligatorio = diasPreaviso,
+            IndemnizacionAntiguedadEstimada = indemnizacion,
+            BaseLegal = "Ley No. 185 (Código del Trabajo de Nicaragua) - Art. 45 (Antigüedad) y Art. 48 (Preaviso)"
+        };
+    }
 }

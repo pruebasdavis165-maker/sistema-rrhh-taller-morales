@@ -111,8 +111,8 @@ public static class DbInitializer
 
         var cont3_actual = new Contrato(
             exp3.Id, emp3.Id, "CONT-2026-003", TipoContrato.PeriodoPrueba,
-            new PeriodoVigencia(new DateOnly(2026, 1, 1), new DateOnly(2026, 3, 31)),
-            Salario.EnCordobas(14500m), "Soldador Industrial", "Período de prueba de 3 meses según Código del Trabajo", EstadoContrato.Vigente
+            new PeriodoVigencia(new DateOnly(2026, 1, 1), new DateOnly(2026, 1, 30)),
+            Salario.EnCordobas(14500m), "Soldador Industrial", "Período de prueba legal de 30 días según Art. 28 Ley 185", EstadoContrato.Vigente
         );
 
         await context.Contratos.AddRangeAsync(cont1_hist, cont1_actual, cont2_actual, cont3_actual);

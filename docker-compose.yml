@@ -1,0 +1,67 @@
+services:
+  # ── Base de Datos PostgreSQL ─────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: tornomorales-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-tornomorales_rrhh}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-TornoMorales2026SecurePass!}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - tornomorales-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-tornomorales_rrhh}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Backend API (.NET 9) ─────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: tornomorales-backend
+    restart: unless-stopped
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=${POSTGRES_DB:-tornomorales_rrhh};Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD:-TornoMorales2026SecurePass!}
+      - Jwt__SecretKey=${JWT_SECRET_KEY:-TornoMorales_SecretKey_RRHH_Nicaragua_2026_AdvancedEnterpriseSecurityKey!}
+      - Jwt__Issuer=TornoMoralesApi
+      - Jwt__Audience=TornoMoralesClient
+    ports:
+      - "${BACKEND_PORT:-5076}:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - tornomorales-net
+
+  # ── Frontend (Next.js 16) ─────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: tornomorales-frontend
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:5076/api}
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+    depends_on:
+      - backend
+    networks:
+      - tornomorales-net
+
+volumes:
+  pgdata:
+    driver: local
+
+networks:
+  tornomorales-net:
+    driver: bridge

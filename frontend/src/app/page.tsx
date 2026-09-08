@@ -2,8 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import Header from '@/components/Header';
-import { contratosApi, vacacionesApi, empleadosApi, auditoriaApi } from '@/lib/api';
-import { AuditoriaDto, EstadoContrato, EstadoVacaciones, ContratoDto, SolicitudVacacionesDto } from '@/types';
+import { dashboardApi, auditoriaApi } from '@/lib/api';
+import {
+  DashboardAnaliticaDto,
+  AuditoriaDto,
+  AlertaContratacionDto,
+} from '@/types';
 import Link from 'next/link';
 import {
   FileText,
@@ -11,14 +15,18 @@ import {
   Users,
   ShieldCheck,
   ArrowRight,
-  TrendingUp,
   Clock,
-  CheckCircle2,
-  AlertCircle,
   Wrench,
   Loader2,
   PieChart as PieIcon,
   BarChart3,
+  AlertTriangle,
+  DollarSign,
+  Briefcase,
+  TrendingDown,
+  Calendar,
+  AlertOctagon,
+  Info,
 } from 'lucide-react';
 import {
   PieChart,
@@ -31,82 +39,30 @@ import {
   XAxis,
   YAxis,
   CartesianGrid,
+  AreaChart,
+  Area,
 } from 'recharts';
 
-const CONTRACT_COLORS = {
-  vigente: '#2563eb', // blue-600
-  finalizado: '#64748b', // slate-500
-  prueba: '#f59e0b', // amber-500
-  otros: '#94a3b8', // slate-400
-};
-
-const VACATION_COLORS = {
-  pendientes: '#f59e0b', // amber-500
-  aprobadas: '#10b981', // emerald-500
-  gozadas: '#3b82f6', // blue-500
-  rechazadas: '#f43f5e', // rose-500
-};
+const SPECIALTY_COLORS = ['#2563eb', '#0d9488', '#f59e0b', '#8b5cf6', '#ec4899', '#64748b'];
 
 export default function DashboardPage() {
-  const [stats, setStats] = useState({
-    empleados: 0,
-    contratosVigentes: 0,
-    vacacionesPendientes: 0,
-    auditoriasTotales: 0,
-  });
+  const [analitica, setAnalitica] = useState<DashboardAnaliticaDto | null>(null);
   const [actividades, setActividades] = useState<AuditoriaDto[]>([]);
-  const [contractData, setContractData] = useState<any[]>([]);
-  const [vacationData, setVacationData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function loadDashboard() {
       setLoading(true);
       try {
-        const [resEmp, resContratos, resVacaciones, resAudit] = await Promise.all([
-          empleadosApi.listar(),
-          contratosApi.listar({ pageSize: 100 }),
-          vacacionesApi.listar({ pageSize: 100 }),
-          auditoriaApi.listar(8),
+        const [resAnalitica, resAudit] = await Promise.all([
+          dashboardApi.obtenerAnalitica(),
+          auditoriaApi.listar(6),
         ]);
 
-        const allContratos = resContratos.items || [];
-        const allVacaciones = resVacaciones.items || [];
-
-        const vigentes = allContratos.filter((c) => c.estado === EstadoContrato.Vigente);
-        const finalizados = allContratos.filter((c) => c.estado === EstadoContrato.Finalizado);
-        const prueba = allContratos.filter((c) => c.tipo === 4); // Periodo de prueba
-
-        setStats({
-          empleados: resEmp.length,
-          contratosVigentes: vigentes.length,
-          vacacionesPendientes: allVacaciones.filter((v) => v.estado === EstadoVacaciones.Pendiente).length,
-          auditoriasTotales: resAudit.length,
-        });
-
-        // Configuración para el gráfico de contratos
-        setContractData([
-          { name: 'Vigentes', value: vigentes.length || 0, color: CONTRACT_COLORS.vigente },
-          { name: 'Finalizados', value: finalizados.length || 0, color: CONTRACT_COLORS.finalizado },
-          { name: 'En Prueba', value: prueba.length || 0, color: CONTRACT_COLORS.prueba },
-        ]);
-
-        // Configuración para el gráfico de vacaciones
-        const vacPendientes = allVacaciones.filter((v) => v.estado === EstadoVacaciones.Pendiente).length;
-        const vacAprobadas = allVacaciones.filter((v) => v.estado === EstadoVacaciones.Aprobada).length;
-        const vacGozadas = allVacaciones.filter((v) => v.estado === EstadoVacaciones.Gozada).length;
-        const vacRechazadas = allVacaciones.filter((v) => v.estado === EstadoVacaciones.Rechazada).length;
-
-        setVacationData([
-          { estado: 'Pendientes', cantidad: vacPendientes, fill: VACATION_COLORS.pendientes },
-          { estado: 'Aprobadas', cantidad: vacAprobadas, fill: VACATION_COLORS.aprobadas },
-          { estado: 'Gozadas', cantidad: vacGozadas, fill: VACATION_COLORS.gozadas },
-          { estado: 'Rechazadas', cantidad: vacRechazadas, fill: VACATION_COLORS.rechazadas },
-        ]);
-
+        setAnalitica(resAnalitica);
         setActividades(resAudit);
       } catch (err) {
-        console.error('Error al cargar datos del dashboard', err);
+        console.error('Error al cargar datos analíticos del dashboard', err);
       } finally {
         setLoading(false);
       }
@@ -115,27 +71,34 @@ export default function DashboardPage() {
     loadDashboard();
   }, []);
 
+  const formatMoney = (amount: number) => {
+    return new Intl.NumberFormat('es-NI', {
+      style: 'currency',
+      currency: 'NIO',
+      minimumFractionDigits: 2,
+    }).format(amount);
+  };
+
   return (
     <div className="flex-1 flex flex-col bg-slate-50 min-h-screen">
       <Header
-        title="Panel Ejecutivo de Control"
+        title="Panel Ejecutivo y Analítica Avanzada"
         subtitle="Sistema de Gestión de Recursos Humanos • Taller de Torno Morales López"
       />
 
       <main className="p-8 max-w-7xl w-full mx-auto space-y-8">
         {/* Welcome Banner */}
-        <div className="bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 text-white p-8 rounded-3xl shadow-xl relative overflow-hidden">
+        <div className="bg-gradient-to-r from-blue-950 via-slate-900 to-indigo-950 text-white p-8 rounded-3xl shadow-xl relative overflow-hidden border border-slate-800">
           <div className="relative z-10 max-w-2xl">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/20 border border-blue-400/30 text-blue-300 text-xs font-semibold mb-3">
               <Wrench className="w-3.5 h-3.5" />
-              Taller de Torno Morales López
+              Taller de Torno Morales López • Operaciones de Tornería y Mecanizado
             </div>
             <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
-              Gestión Integral de Recursos Humanos
+              Control Integral de Personal y Analítica de RRHH
             </h2>
             <p className="mt-2 text-sm text-slate-300 leading-relaxed font-normal">
-              Plataforma empresarial de administración de personal con validación de no solapamiento
-              en contratos laborales (RF-0005) y control estricto de saldos de vacaciones (RF-0004).
+              Supervisión de costos de nómina, monitoreo preventivo de vencimiento de contratos conforme a la Ley No. 185 y métricas de ausentismo del taller en tiempo real.
             </p>
 
             <div className="flex flex-wrap gap-3 mt-6">
@@ -162,15 +125,15 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* KPI Metrics */}
+        {/* KPI Metrics Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs flex items-center justify-between">
             <div>
-              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Trabajadores</p>
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Fuerza Laboral</p>
               <h3 className="text-3xl font-extrabold text-slate-800 mt-1">
-                {loading ? <Loader2 className="w-5 h-5 animate-spin text-blue-600" /> : stats.empleados}
+                {loading ? <Loader2 className="w-5 h-5 animate-spin text-blue-600" /> : analitica?.totalEmpleados}
               </h3>
-              <p className="text-[11px] text-slate-400 mt-1">Personal en plantilla activa</p>
+              <p className="text-[11px] text-slate-400 mt-1">Colaboradores activos</p>
             </div>
             <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
               <Users className="w-6 h-6" />
@@ -181,9 +144,9 @@ export default function DashboardPage() {
             <div>
               <p className="text-xs font-semibold text-emerald-600 uppercase tracking-wider">Contratos Vigentes</p>
               <h3 className="text-3xl font-extrabold text-slate-800 mt-1">
-                {loading ? <Loader2 className="w-5 h-5 animate-spin text-emerald-600" /> : stats.contratosVigentes}
+                {loading ? <Loader2 className="w-5 h-5 animate-spin text-emerald-600" /> : analitica?.contratosVigentes}
               </h3>
-              <p className="text-[11px] text-slate-400 mt-1">Sin solapamientos (RF-0005)</p>
+              <p className="text-[11px] text-slate-400 mt-1">Sin solapamiento (RF-0005)</p>
             </div>
             <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
               <FileText className="w-6 h-6" />
@@ -192,70 +155,203 @@ export default function DashboardPage() {
 
           <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs flex items-center justify-between">
             <div>
-              <p className="text-xs font-semibold text-amber-600 uppercase tracking-wider">Vacaciones Pendientes</p>
-              <h3 className="text-3xl font-extrabold text-slate-800 mt-1">
-                {loading ? <Loader2 className="w-5 h-5 animate-spin text-amber-600" /> : stats.vacacionesPendientes}
+              <p className="text-xs font-semibold text-amber-600 uppercase tracking-wider">Planilla Mensual</p>
+              <h3 className="text-2xl font-extrabold text-slate-800 mt-1 truncate">
+                {loading ? <Loader2 className="w-5 h-5 animate-spin text-amber-600" /> : formatMoney(analitica?.costoPlanillaMensualActual || 0)}
               </h3>
-              <p className="text-[11px] text-slate-400 mt-1">Requieren revisión de saldo</p>
+              <p className="text-[11px] text-slate-400 mt-1">Costo base en Córdobas (NIO)</p>
             </div>
             <div className="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
-              <Clock className="w-6 h-6" />
+              <DollarSign className="w-6 h-6" />
             </div>
           </div>
 
           <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs flex items-center justify-between">
             <div>
-              <p className="text-xs font-semibold text-indigo-600 uppercase tracking-wider">Auditoría Registrada</p>
+              <p className="text-xs font-semibold text-rose-600 uppercase tracking-wider">Alertas Preventivas</p>
               <h3 className="text-3xl font-extrabold text-slate-800 mt-1">
-                {loading ? <Loader2 className="w-5 h-5 animate-spin text-indigo-600" /> : stats.auditoriasTotales}
+                {loading ? <Loader2 className="w-5 h-5 animate-spin text-rose-600" /> : analitica?.alertasContratacion.length}
               </h3>
-              <p className="text-[11px] text-slate-400 mt-1">Trazabilidad total (RF-0006)</p>
+              <p className="text-[11px] text-rose-600/80 mt-1">Próximos a vencer / prueba</p>
             </div>
-            <div className="w-12 h-12 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
-              <ShieldCheck className="w-6 h-6" />
+            <div className="w-12 h-12 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center">
+              <AlertTriangle className="w-6 h-6" />
             </div>
           </div>
         </div>
 
-        {/* Sección Visual: Gráficos de Contratos y Vacaciones */}
+        {/* Sistema de Alertas Preventivas de Contratación (Widget Centralizado) */}
+        {analitica && analitica.alertasContratacion.length > 0 && (
+          <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-xs space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600">
+                  <AlertTriangle className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900">
+                    Alertas Preventivas de Contratación y Períodos de Prueba
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Notificaciones de vencimiento legal estipuladas según el Código del Trabajo (Ley No. 185)
+                  </p>
+                </div>
+              </div>
+              <span className="px-2.5 py-1 bg-amber-50 text-amber-800 font-semibold text-xs rounded-full border border-amber-200">
+                {analitica.alertasContratacion.length} aviso(s) activo(s)
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
+              {analitica.alertasContratacion.map((alerta) => (
+                <div
+                  key={alerta.contratoId}
+                  className={`p-4 rounded-2xl border transition-all ${
+                    alerta.nivelAlerta === 'Critico'
+                      ? 'bg-rose-50/50 border-rose-200 hover:border-rose-300'
+                      : alerta.nivelAlerta === 'Advertencia'
+                      ? 'bg-amber-50/50 border-amber-200 hover:border-amber-300'
+                      : 'bg-blue-50/40 border-blue-200 hover:border-blue-300'
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <span
+                      className={`text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 ${
+                        alerta.nivelAlerta === 'Critico'
+                          ? 'bg-rose-100 text-rose-800'
+                          : alerta.nivelAlerta === 'Advertencia'
+                          ? 'bg-amber-100 text-amber-800'
+                          : 'bg-blue-100 text-blue-800'
+                      }`}
+                    >
+                      {alerta.nivelAlerta === 'Critico' ? (
+                        <AlertOctagon className="w-3 h-3" />
+                      ) : alerta.nivelAlerta === 'Advertencia' ? (
+                        <AlertTriangle className="w-3 h-3" />
+                      ) : (
+                        <Info className="w-3 h-3" />
+                      )}
+                      <span>{alerta.tipoContrato}</span>
+                    </span>
+
+                    <span className="text-[11px] font-bold text-slate-700 font-mono">
+                      {alerta.diasRestantes === 0 ? '¡VENCE HOY!' : `${alerta.diasRestantes} días rest.`}
+                    </span>
+                  </div>
+
+                  <p className="text-xs font-bold text-slate-900">{alerta.nombreEmpleado}</p>
+                  <p className="text-[11px] text-slate-500 font-medium">{alerta.cargo} • {alerta.codigoContrato}</p>
+                  <p className="text-xs text-slate-600 mt-2 font-normal leading-relaxed">{alerta.mensaje}</p>
+
+                  <div className="pt-3 mt-3 border-t border-slate-200/60 flex items-center justify-between">
+                    <span className="text-[11px] text-slate-400 flex items-center gap-1">
+                      <Calendar className="w-3 h-3" />
+                      Vence: {alerta.fechaFin}
+                    </span>
+                    <Link
+                      href="/contratos"
+                      className="text-xs text-blue-600 hover:text-blue-800 font-semibold flex items-center gap-0.5"
+                    >
+                      <span>Gestionar</span>
+                      <ArrowRight className="w-3 h-3" />
+                    </Link>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Expansión Analítica de Gráficos (Recharts) */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Gráfico de Distribución de Contratos */}
+          {/* Gráfico 1: Comparativa Mensual de Costos de Planilla */}
           <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs space-y-4">
             <div className="flex items-center justify-between pb-2 border-b border-slate-100">
               <div>
                 <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
-                  <PieIcon className="w-4 h-4 text-blue-600" />
-                  Distribución de Contratos Laborales
+                  <BarChart3 className="w-4 h-4 text-blue-600" />
+                  Evolución Mensual de Costos de Planilla
                 </h3>
-                <p className="text-xs text-slate-500 mt-0.5">Estado actual de la fuerza laboral</p>
+                <p className="text-xs text-slate-500 mt-0.5">Total de salarios devengados en el taller (NIO)</p>
               </div>
-              <span className="text-[11px] font-semibold text-blue-600 bg-blue-50 px-2.5 py-0.5 rounded-full">
-                RF-0005
+              <span className="text-[11px] font-semibold text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200">
+                Últimos 6 Meses
               </span>
             </div>
 
             {loading ? (
-              <div className="h-56 flex items-center justify-center">
+              <div className="h-64 flex items-center justify-center">
                 <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
               </div>
             ) : (
-              <div className="h-56 flex items-center justify-center">
+              <div className="h-64 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={analitica?.comparativaPlanilla || []} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="colorPlanilla" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#2563eb" stopOpacity={0.4} />
+                        <stop offset="95%" stopColor="#2563eb" stopOpacity={0.0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                    <XAxis dataKey="mes" tick={{ fontSize: 11, fill: '#64748b' }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fontSize: 11, fill: '#64748b' }} axisLine={false} tickLine={false} tickFormatter={(v) => `C$${(v/1000).toFixed(0)}k`} />
+                    <Tooltip
+                      formatter={(val: any) => [formatMoney(val), 'Planilla']}
+                      contentStyle={{
+                        backgroundColor: '#0f172a',
+                        border: 'none',
+                        borderRadius: '0.75rem',
+                        fontSize: '12px',
+                        color: '#fff',
+                      }}
+                    />
+                    <Area type="monotone" dataKey="totalPlanillaCordobas" stroke="#2563eb" strokeWidth={2.5} fillOpacity={1} fill="url(#colorPlanilla)" />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </div>
+
+          {/* Gráfico 2: Distribución de Personal por Especialidad Técnica */}
+          <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs space-y-4">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+              <div>
+                <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                  <PieIcon className="w-4 h-4 text-emerald-600" />
+                  Distribución de Personal por Especialidad
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">Estructura técnica de mecanizado y soporte</p>
+              </div>
+              <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
+                Puestos de Trabajo
+              </span>
+            </div>
+
+            {loading ? (
+              <div className="h-64 flex items-center justify-center">
+                <Loader2 className="w-6 h-6 animate-spin text-emerald-600" />
+              </div>
+            ) : (
+              <div className="h-64 flex items-center justify-center">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
-                      data={contractData}
+                      data={analitica?.distribucionEspecialidad || []}
                       cx="50%"
                       cy="50%"
-                      innerRadius={50}
-                      outerRadius={80}
-                      paddingAngle={5}
-                      dataKey="value"
+                      innerRadius={55}
+                      outerRadius={85}
+                      paddingAngle={4}
+                      dataKey="cantidad"
+                      nameKey="cargo"
                     >
-                      {contractData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      {(analitica?.distribucionEspecialidad || []).map((entry, index) => (
+                        <Cell key={`cell-esp-${index}`} fill={SPECIALTY_COLORS[index % SPECIALTY_COLORS.length]} />
                       ))}
                     </Pie>
                     <Tooltip
+                      formatter={(val: any, name: any) => [`${val} operario(s)`, name]}
                       contentStyle={{
                         backgroundColor: '#0f172a',
                         border: 'none',
@@ -269,50 +365,45 @@ export default function DashboardPage() {
               </div>
             )}
 
-            <div className="flex items-center justify-center gap-6 pt-2 border-t border-slate-100 text-xs text-slate-600">
-              <div className="flex items-center gap-2">
-                <span className="w-3 h-3 rounded-full bg-blue-600"></span>
-                <span>Vigentes</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="w-3 h-3 rounded-full bg-slate-500"></span>
-                <span>Finalizados</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="w-3 h-3 rounded-full bg-amber-500"></span>
-                <span>En Prueba</span>
-              </div>
+            <div className="flex flex-wrap items-center justify-center gap-3 pt-2 border-t border-slate-100 text-xs text-slate-600">
+              {(analitica?.distribucionEspecialidad || []).map((esp, i) => (
+                <div key={esp.cargo} className="flex items-center gap-1.5">
+                  <span
+                    className="w-2.5 h-2.5 rounded-full"
+                    style={{ backgroundColor: SPECIALTY_COLORS[i % SPECIALTY_COLORS.length] }}
+                  ></span>
+                  <span className="truncate max-w-[120px]" title={esp.cargo}>{esp.cargo}</span>
+                  <span className="font-semibold text-slate-800">({esp.cantidad})</span>
+                </div>
+              ))}
             </div>
           </div>
+        </div>
 
-          {/* Gráfico de Solicitudes de Vacaciones */}
+        {/* Gráfico 3 & Historial de Auditoría */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Métricas de Ausentismo (Vacaciones) */}
           <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs space-y-4">
             <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-              <div>
-                <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
-                  <BarChart3 className="w-4 h-4 text-emerald-600" />
-                  Estado de Solicitudes de Vacaciones
-                </h3>
-                <p className="text-xs text-slate-500 mt-0.5">Control y flujo de descansos remunerados</p>
-              </div>
-              <span className="text-[11px] font-semibold text-emerald-600 bg-emerald-50 px-2.5 py-0.5 rounded-full">
-                RF-0004
-              </span>
+              <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                <TrendingDown className="w-4 h-4 text-indigo-600" />
+                Métricas de Ausentismo (Vacaciones)
+              </h3>
             </div>
 
             {loading ? (
               <div className="h-56 flex items-center justify-center">
-                <Loader2 className="w-6 h-6 animate-spin text-emerald-600" />
+                <Loader2 className="w-6 h-6 animate-spin text-indigo-600" />
               </div>
             ) : (
               <div className="h-56 w-full">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={vacationData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                  <BarChart data={analitica?.metricasAusentismo || []} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                    <XAxis dataKey="estado" tick={{ fontSize: 11, fill: '#64748b' }} axisLine={false} tickLine={false} />
-                    <YAxis tick={{ fontSize: 11, fill: '#64748b' }} axisLine={false} tickLine={false} allowDecimals={false} />
+                    <XAxis dataKey="mes" tick={{ fontSize: 10, fill: '#64748b' }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fontSize: 10, fill: '#64748b' }} axisLine={false} tickLine={false} />
                     <Tooltip
-                      cursor={{ fill: '#f8fafc' }}
+                      formatter={(val: any) => [`${val} días`, 'Ausencia por Descanso']}
                       contentStyle={{
                         backgroundColor: '#0f172a',
                         border: 'none',
@@ -321,108 +412,22 @@ export default function DashboardPage() {
                         color: '#fff',
                       }}
                     />
-                    <Bar dataKey="cantidad" radius={[6, 6, 0, 0]}>
-                      {vacationData.map((entry, index) => (
-                        <Cell key={`bar-${index}`} fill={entry.fill} />
-                      ))}
-                    </Bar>
+                    <Bar dataKey="diasAusenciaVacaciones" fill="#6366f1" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
             )}
 
-            <div className="flex items-center justify-center gap-4 pt-2 border-t border-slate-100 text-xs text-slate-600">
-              <div className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
-                <span>Pendientes</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
-                <span>Aprobadas</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
-                <span>Gozadas</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-rose-500"></span>
-                <span>Rechazadas</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Grid Layout: Operaciones Rápidas + Historial de Auditoría */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Quick Actions Card */}
-          <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs space-y-4">
-            <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
-              <TrendingUp className="w-4 h-4 text-blue-600" />
-              Operaciones Directas
-            </h3>
-
-            <div className="space-y-2.5">
-              <Link
-                href="/contratos"
-                className="p-3 bg-slate-50/80 hover:bg-blue-50 border border-slate-200/80 hover:border-blue-200 rounded-xl flex items-center justify-between group transition-all"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center">
-                    <FileText className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <p className="text-xs font-bold text-slate-800 group-hover:text-blue-700">
-                      Gestionar Contratos
-                    </p>
-                    <p className="text-[11px] text-slate-500">Comprobación de fechas sin solapamiento</p>
-                  </div>
-                </div>
-                <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-blue-600 transition-transform group-hover:translate-x-0.5" />
-              </Link>
-
-              <Link
-                href="/vacaciones"
-                className="p-3 bg-slate-50/80 hover:bg-emerald-50 border border-slate-200/80 hover:border-emerald-200 rounded-xl flex items-center justify-between group transition-all"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center">
-                    <Palmtree className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <p className="text-xs font-bold text-slate-800 group-hover:text-emerald-700">
-                      Revisar Vacaciones
-                    </p>
-                    <p className="text-[11px] text-slate-500">Cálculo de días y aprobación</p>
-                  </div>
-                </div>
-                <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-emerald-600 transition-transform group-hover:translate-x-0.5" />
-              </Link>
-
-              <Link
-                href="/auditoria"
-                className="p-3 bg-slate-50/80 hover:bg-indigo-50 border border-slate-200/80 hover:border-indigo-200 rounded-xl flex items-center justify-between group transition-all"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center">
-                    <ShieldCheck className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <p className="text-xs font-bold text-slate-800 group-hover:text-indigo-700">
-                      Bitácora de Auditoría
-                    </p>
-                    <p className="text-[11px] text-slate-500">Trazabilidad de modificaciones</p>
-                  </div>
-                </div>
-                <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-indigo-600 transition-transform group-hover:translate-x-0.5" />
-              </Link>
-            </div>
+            <p className="text-[11px] text-slate-400 text-center">
+              Días de descanso remunerado gozados por el personal en los últimos meses.
+            </p>
           </div>
 
-          {/* Recent Audit Activities (RF-0006) */}
+          {/* Historial de Auditoría Reciente (RF-0006) */}
           <div className="lg:col-span-2 bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs space-y-4">
             <div className="flex items-center justify-between pb-2 border-b border-slate-100">
               <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
-                <ShieldCheck className="w-4 h-4 text-indigo-600" />
+                <ShieldCheck className="w-4 h-4 text-blue-600" />
                 Registro Reciente de Operaciones y Auditoría (RF-0006)
               </h3>
               <Link href="/auditoria" className="text-xs text-blue-600 hover:text-blue-700 font-medium hover:underline">
@@ -443,7 +448,7 @@ export default function DashboardPage() {
                   <div key={act.id} className="py-3 flex items-start justify-between gap-4">
                     <div className="flex items-start gap-3">
                       <span
-                        className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase mt-0.5 ${
+                        className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase mt-0.5 ${
                           act.accion === 'CREAR' || act.accion === 'SOLICITAR'
                             ? 'bg-blue-100 text-blue-800'
                             : act.accion === 'APROBAR'

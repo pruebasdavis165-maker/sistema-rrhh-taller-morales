@@ -31,3 +31,6 @@ yarn-error.log*
 ## OS Generated
 .DS_Store
 Thumbs.db
+
+## SonarQube / Scanner
+.scannerwork/
