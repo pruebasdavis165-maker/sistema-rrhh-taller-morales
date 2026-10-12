@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Header from '@/components/Header';
+import Link from 'next/link';
 import { 
   UserPlus, 
   Users, 
@@ -14,7 +15,8 @@ import {
   Lock, 
   Mail, 
   User as UserIcon,
-  AlertCircle
+  AlertCircle,
+  Ban
 } from 'lucide-react';
 import { UsuarioDto, CrearUsuarioRequest, ActualizarUsuarioRequest, RolUsuario } from '@/types';
 import { usuariosApi } from '@/lib/api';
@@ -174,6 +176,34 @@ export default function UsuariosPage() {
         return 'bg-slate-50 text-slate-700 border-slate-200';
     }
   };
+
+  if (currentUser?.rol === 'Supervisor') {
+    return (
+      <div className="flex-1 flex flex-col bg-slate-50 min-h-screen">
+        <Header
+          title="Acceso Restringido"
+          subtitle="Módulo Reservado • Taller de Torno Morales López"
+        />
+        <main className="p-8 max-w-lg w-full mx-auto my-auto text-center space-y-4">
+          <div className="w-16 h-16 rounded-2xl bg-amber-50 border border-amber-200 text-amber-600 flex items-center justify-center mx-auto shadow-xs">
+            <Ban className="w-8 h-8" />
+          </div>
+          <h2 className="text-xl font-bold text-slate-900">Configuración del Sistema</h2>
+          <p className="text-xs text-slate-500 leading-relaxed">
+            Su cuenta posee el rol de <strong>Supervisor de Taller</strong>. La administración y asignación de usuarios y roles está reservada para Administradores y Recursos Humanos.
+          </p>
+          <div className="pt-2">
+            <Link
+              href="/"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-semibold shadow-sm transition-colors"
+            >
+              Volver al Panel Principal
+            </Link>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="flex-1 flex flex-col min-h-screen">

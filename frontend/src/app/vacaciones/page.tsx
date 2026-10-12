@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Header from '@/components/Header';
 import StatusBadge from '@/components/StatusBadge';
 import NuevaSolicitudModal from '@/components/vacaciones/NuevaSolicitudModal';
@@ -25,8 +26,9 @@ import {
   Sparkles,
 } from 'lucide-react';
 
-export default function VacacionesPage() {
+function VacacionesContent() {
   const { hasRole } = useAuth();
+  const searchParams = useSearchParams();
   const [solicitudes, setSolicitudes] = useState<SolicitudVacacionesDto[]>([]);
   const [empleados, setEmpleados] = useState<EmpleadoDto[]>([]);
   const [estadosVacaciones, setEstadosVacaciones] = useState<{ id: number; nombre: string }[]>([]);
@@ -39,7 +41,15 @@ export default function VacacionesPage() {
   // Filters
   const [selectedEmpleadoId, setSelectedEmpleadoId] = useState<number | undefined>();
   const [selectedEstado, setSelectedEstado] = useState<number | undefined>();
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState(searchParams?.get('q') || '');
+
+  // Sincronizar parámetro de búsqueda ?q=
+  useEffect(() => {
+    const q = searchParams?.get('q');
+    if (q !== null && q !== undefined) {
+      setSearchTerm(q);
+    }
+  }, [searchParams]);
 
   // Modals
   const [isNuevaModalOpen, setIsNuevaModalOpen] = useState(false);
@@ -528,5 +538,26 @@ export default function VacacionesPage() {
         }}
       />
     </div>
+  );
+}
+
+export default function VacacionesPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex-1 flex flex-col bg-slate-50 min-h-screen">
+          <Header
+            title="Control de Vacaciones y Descansos Laborales"
+            subtitle="Cómputo en vivo según Art. 76 Ley No. 185 y gestión de descansos (RF-0004)"
+          />
+          <div className="p-12 flex flex-col items-center justify-center text-slate-400 gap-3">
+            <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+            <p className="text-xs">Cargando módulo de vacaciones...</p>
+          </div>
+        </div>
+      }
+    >
+      <VacacionesContent />
+    </Suspense>
   );
 }

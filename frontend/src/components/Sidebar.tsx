@@ -23,13 +23,21 @@ export default function Sidebar() {
     return null;
   }
 
-  const navigation = [
+  const isSupervisor = user?.rol === 'Supervisor';
+
+  const baseNavigation = [
     { name: 'Dashboard', href: '/', icon: LayoutDashboard },
-    { name: 'Gestión de Contratos', href: '/contratos', icon: FileText, tag: 'RF-0005' },
+    ...(!isSupervisor
+      ? [{ name: 'Gestión de Contratos', href: '/contratos', icon: FileText, tag: 'RF-0005' }]
+      : []),
     { name: 'Gestión de Vacaciones', href: '/vacaciones', icon: Palmtree, tag: 'RF-0004' },
     { name: 'Expedientes Laborales', href: '/empleados', icon: Users, tag: 'RF-0001' },
-    { name: 'Trazabilidad y Auditoría', href: '/auditoria', icon: ShieldCheck, tag: 'RF-0006' },
+    ...(!isSupervisor
+      ? [{ name: 'Trazabilidad y Auditoría', href: '/auditoria', icon: ShieldCheck, tag: 'RF-0006' }]
+      : []),
   ];
+
+  const navigation = [...baseNavigation];
 
   // Si es Administrador o RRHH, mostrar gestión de usuarios
   if (hasRole(['Administrador', 'RRHH'])) {
@@ -37,7 +45,7 @@ export default function Sidebar() {
       name: 'Gestión de Usuarios',
       href: '/usuarios',
       icon: UserCog,
-      tag: 'Seguridad'
+      tag: 'Seguridad',
     });
   }
 
@@ -98,7 +106,7 @@ export default function Sidebar() {
       {/* Navigation Links */}
       <div className="flex-1 py-3 px-3 space-y-1 overflow-y-auto">
         <div className="px-3 pb-2 text-[11px] font-semibold tracking-wider text-slate-400 uppercase">
-          Módulos Principales
+          {isSupervisor ? 'Supervisión de Taller' : 'Módulos Principales'}
         </div>
 
         {navigation.map((item) => {
