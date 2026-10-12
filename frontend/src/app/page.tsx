@@ -91,17 +91,17 @@ export default function DashboardPage() {
       />
 
       <main className="p-8 max-w-7xl w-full mx-auto space-y-8">
-        {/* Welcome Banner */}
-        <div className="bg-gradient-to-r from-blue-950 via-slate-900 to-indigo-950 text-white p-8 rounded-3xl shadow-xl relative overflow-hidden border border-slate-800">
+        {/* Welcome Banner Corporativo (Tema Claro y Moderno) */}
+        <div className="bg-white border border-slate-200/80 shadow-md p-8 rounded-3xl relative overflow-hidden">
           <div className="relative z-10 max-w-2xl">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/20 border border-blue-400/30 text-blue-300 text-xs font-semibold mb-3">
-              <Wrench className="w-3.5 h-3.5" />
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-xs font-semibold mb-3 shadow-xs">
+              <Wrench className="w-3.5 h-3.5 text-blue-600" />
               <span>Bienvenido, {user?.nombreCompleto || 'Usuario'} - Panel de {user?.rol || 'Gestión'}</span>
             </div>
-            <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
+            <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900">
               Control Integral de Personal y Analítica de RRHH
             </h2>
-            <p className="mt-2 text-sm text-slate-300 leading-relaxed font-normal">
+            <p className="mt-2 text-sm text-slate-600 leading-relaxed font-normal">
               {isSupervisor
                 ? 'Supervisión operativa de personal técnico de mecanizado y tornería, monitoreo de descansos laborales y control de ausentismo en taller.'
                 : 'Supervisión de costos de nómina, monitoreo preventivo de vencimiento de contratos conforme a la Ley No. 185 y métricas de ausentismo del taller en tiempo real.'}
@@ -112,7 +112,7 @@ export default function DashboardPage() {
                 <>
                   <Link
                     href="/contratos"
-                    className="px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs rounded-xl shadow-md shadow-blue-600/30 flex items-center gap-2 transition-all"
+                    className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-semibold text-xs rounded-xl shadow-xs hover:shadow-md flex items-center gap-2 transition-all"
                   >
                     <FileText className="w-4 h-4" />
                     <span>Gestión de Contratos</span>
@@ -120,9 +120,9 @@ export default function DashboardPage() {
                   </Link>
                   <Link
                     href="/vacaciones"
-                    className="px-4 py-2.5 bg-slate-800/80 hover:bg-slate-700 text-white font-semibold text-xs rounded-xl border border-slate-700 flex items-center gap-2 transition-all"
+                    className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs rounded-xl border border-slate-200 flex items-center gap-2 transition-all shadow-xs"
                   >
-                    <Palmtree className="w-4 h-4 text-emerald-400" />
+                    <Palmtree className="w-4 h-4 text-emerald-600" />
                     <span>Control de Vacaciones</span>
                   </Link>
                 </>
@@ -130,7 +130,7 @@ export default function DashboardPage() {
                 <>
                   <Link
                     href="/vacaciones"
-                    className="px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs rounded-xl shadow-md shadow-blue-600/30 flex items-center gap-2 transition-all"
+                    className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-semibold text-xs rounded-xl shadow-xs hover:shadow-md flex items-center gap-2 transition-all"
                   >
                     <Palmtree className="w-4 h-4 text-white" />
                     <span>Control de Vacaciones</span>
@@ -138,9 +138,9 @@ export default function DashboardPage() {
                   </Link>
                   <Link
                     href="/empleados"
-                    className="px-4 py-2.5 bg-slate-800/80 hover:bg-slate-700 text-white font-semibold text-xs rounded-xl border border-slate-700 flex items-center gap-2 transition-all"
+                    className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs rounded-xl border border-slate-200 flex items-center gap-2 transition-all shadow-xs"
                   >
-                    <Users className="w-4 h-4 text-blue-400" />
+                    <Users className="w-4 h-4 text-blue-600" />
                     <span>Expedientes de Personal</span>
                   </Link>
                 </>
@@ -148,8 +148,8 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          <div className="absolute right-[-20px] bottom-[-20px] opacity-10 pointer-events-none hidden lg:block">
-            <Wrench className="w-80 h-80 text-white" />
+          <div className="absolute right-[-20px] bottom-[-20px] opacity-5 pointer-events-none hidden lg:block">
+            <Wrench className="w-80 h-80 text-slate-900" />
           </div>
         </div>
 
