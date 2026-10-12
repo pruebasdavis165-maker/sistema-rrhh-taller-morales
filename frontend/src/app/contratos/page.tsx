@@ -1,12 +1,15 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Header from '@/components/Header';
 import StatusBadge from '@/components/StatusBadge';
 import NuevoContratoModal from '@/components/contratos/NuevoContratoModal';
 import FinalizarContratoModal from '@/components/contratos/FinalizarContratoModal';
+import { useAuth } from '@/context/AuthContext';
 import { contratosApi, empleadosApi } from '@/lib/api';
 import { ContratoDto, EmpleadoDto, EstadoContrato, TipoContrato } from '@/types';
+import Link from 'next/link';
 import {
   FileText,
   Plus,
@@ -21,7 +24,9 @@ import {
   FilterX,
 } from 'lucide-react';
 
-export default function ContratosPage() {
+function ContratosContent() {
+  const { user } = useAuth();
+  const searchParams = useSearchParams();
   const [contratos, setContratos] = useState<ContratoDto[]>([]);
   const [empleados, setEmpleados] = useState<EmpleadoDto[]>([]);
   const [tiposContrato, setTiposContrato] = useState<{ id: number; nombre: string }[]>([]);
@@ -33,11 +38,48 @@ export default function ContratosPage() {
   const [selectedEmpleadoId, setSelectedEmpleadoId] = useState<number | undefined>();
   const [selectedEstado, setSelectedEstado] = useState<number | undefined>();
   const [selectedTipo, setSelectedTipo] = useState<number | undefined>();
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState(searchParams?.get('q') || '');
 
   // Modals state
   const [isNuevoModalOpen, setIsNuevoModalOpen] = useState(false);
   const [contratoAFinalizar, setContratoAFinalizar] = useState<ContratoDto | null>(null);
+
+  // Sincronizar parámetro de búsqueda global ?q=
+  useEffect(() => {
+    const q = searchParams?.get('q');
+    if (q !== null && q !== undefined) {
+      setSearchTerm(q);
+    }
+  }, [searchParams]);
+
+  // Si el usuario es Supervisor, denegar acceso a la administración total de contratos
+  if (user?.rol === 'Supervisor') {
+    return (
+      <div className="flex-1 flex flex-col bg-slate-50 min-h-screen">
+        <Header
+          title="Acceso Restringido"
+          subtitle="Módulo Reservado • Taller de Torno Morales López"
+        />
+        <main className="p-8 max-w-lg w-full mx-auto my-auto text-center space-y-4">
+          <div className="w-16 h-16 rounded-2xl bg-amber-50 border border-amber-200 text-amber-600 flex items-center justify-center mx-auto shadow-xs">
+            <Ban className="w-8 h-8" />
+          </div>
+          <h2 className="text-xl font-bold text-slate-900">Módulo Administrativo de Contratos</h2>
+          <p className="text-xs text-slate-500 leading-relaxed">
+            Su cuenta posee el rol de <strong>Supervisor de Taller</strong>. La formalización, prórroga y finalización legal de contratos laborales conforme al Código del Trabajo (Ley No. 185) compete exclusivamente a Recursos Humanos y Administración.
+          </p>
+          <div className="pt-2">
+            <Link
+              href="/"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-semibold shadow-sm transition-colors"
+            >
+              Volver al Panel Principal
+            </Link>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   // Fetch de catálogos para filtros dinámicos
   useEffect(() => {
@@ -371,5 +413,26 @@ export default function ContratosPage() {
         onSuccess={cargarDatos}
       />
     </div>
+  );
+}
+
+export default function ContratosPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex-1 flex flex-col bg-slate-50 min-h-screen">
+          <Header
+            title="Administración de Contratos Laborales"
+            subtitle="Control de vigencia, plazos y formalización de personal técnico (RF-0005)"
+          />
+          <div className="p-12 flex flex-col items-center justify-center text-slate-400 gap-3">
+            <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+            <p className="text-xs">Cargando contratos...</p>
+          </div>
+        </div>
+      }
+    >
+      <ContratosContent />
+    </Suspense>
   );
 }
