@@ -24,6 +24,8 @@ import {
 export default function ContratosPage() {
   const [contratos, setContratos] = useState<ContratoDto[]>([]);
   const [empleados, setEmpleados] = useState<EmpleadoDto[]>([]);
+  const [tiposContrato, setTiposContrato] = useState<{ id: number; nombre: string }[]>([]);
+  const [estadosContrato, setEstadosContrato] = useState<{ id: number; nombre: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [totalContratos, setTotalContratos] = useState(0);
 
@@ -37,22 +39,51 @@ export default function ContratosPage() {
   const [isNuevoModalOpen, setIsNuevoModalOpen] = useState(false);
   const [contratoAFinalizar, setContratoAFinalizar] = useState<ContratoDto | null>(null);
 
+  // Fetch de catálogos para filtros dinámicos
+  useEffect(() => {
+    async function cargarCatalogos() {
+      try {
+        // Carga dinámica de empleados desde endpoint existente /api/empleados
+        const resEmpleados = await empleadosApi.listar();
+        setEmpleados(resEmpleados || []);
+      } catch (err) {
+        console.error('Error al cargar empleados para filtro', err);
+      }
+
+      // Catálogo de tipos de contrato
+      // TODO: Si en el futuro se crea el endpoint /api/catalogos/tipos-contrato en .NET, reemplazar este fallback
+      setTiposContrato([
+        { id: TipoContrato.Indefinido, nombre: 'Tiempo Indefinido' },
+        { id: TipoContrato.PlazoFijo, nombre: 'Plazo Fijo / Determinado' },
+        { id: TipoContrato.PeriodoPrueba, nombre: 'Periodo de Prueba' },
+        { id: TipoContrato.ServiciosProfesionales, nombre: 'Servicios Profesionales' },
+        { id: TipoContrato.TemporalPorObra, nombre: 'Temporal por Obra' },
+      ]);
+
+      // Catálogo de estados de contrato
+      // TODO: Si en el futuro se crea el endpoint /api/catalogos/estados-contrato en .NET, reemplazar este fallback
+      setEstadosContrato([
+        { id: EstadoContrato.Vigente, nombre: 'Vigente' },
+        { id: EstadoContrato.Finalizado, nombre: 'Finalizado' },
+        { id: EstadoContrato.Cancelado, nombre: 'Cancelado' },
+      ]);
+    }
+
+    cargarCatalogos();
+  }, []);
+
   const cargarDatos = async () => {
     setLoading(true);
     try {
-      const [resContratos, resEmpleados] = await Promise.all([
-        contratosApi.listar({
-          empleadoId: selectedEmpleadoId,
-          estado: selectedEstado,
-          tipo: selectedTipo,   
-          pageSize: 100,
-        }),
-        empleadosApi.listar(),
-      ]);
+      const resContratos = await contratosApi.listar({
+        empleadoId: selectedEmpleadoId,
+        estado: selectedEstado,
+        tipo: selectedTipo,   
+        pageSize: 100,
+      });
 
       setContratos(resContratos.items || []);
       setTotalContratos(resContratos.totalItems || 0);
-      setEmpleados(resEmpleados || []);
     } catch (err) {
       console.error('Error al cargar contratos', err);
     } finally {
@@ -179,11 +210,11 @@ export default function ContratosPage() {
               className="px-3 py-2 bg-slate-50/80 hover:bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-700 focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
             >
               <option value="">Todos los Tipos</option>
-              <option value={TipoContrato.Indefinido}>Tiempo Indefinido</option>
-              <option value={TipoContrato.PlazoFijo}>Plazo Fijo / Determinado</option>
-              <option value={TipoContrato.PeriodoPrueba}>Periodo de Prueba</option>
-              <option value={TipoContrato.ServiciosProfesionales}>Servicios Profesionales</option>
-              <option value={TipoContrato.TemporalPorObra}>Temporal por Obra</option>
+              {tiposContrato.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.nombre}
+                </option>
+              ))}
             </select>
 
             {/* Filter by Estado */}
@@ -193,9 +224,11 @@ export default function ContratosPage() {
               className="px-3 py-2 bg-slate-50/80 hover:bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-700 focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
             >
               <option value="">Todos los Estados</option>
-              <option value={EstadoContrato.Vigente}>Vigente</option>
-              <option value={EstadoContrato.Finalizado}>Finalizado</option>
-              <option value={EstadoContrato.Cancelado}>Cancelado</option>
+              {estadosContrato.map((est) => (
+                <option key={est.id} value={est.id}>
+                  {est.nombre}
+                </option>
+              ))}
             </select>
 
             {hayFiltrosActivos && (

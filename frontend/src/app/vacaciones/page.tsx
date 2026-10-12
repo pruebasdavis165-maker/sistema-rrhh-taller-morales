@@ -29,6 +29,7 @@ export default function VacacionesPage() {
   const { hasRole } = useAuth();
   const [solicitudes, setSolicitudes] = useState<SolicitudVacacionesDto[]>([]);
   const [empleados, setEmpleados] = useState<EmpleadoDto[]>([]);
+  const [estadosVacaciones, setEstadosVacaciones] = useState<{ id: number; nombre: string }[]>([]);
   const [selectedSaldoEmpleadoId, setSelectedSaldoEmpleadoId] = useState<number | null>(null);
   const [saldoDetalle, setSaldoDetalle] = useState<SaldoVacacionesDto | null>(null);
   const [loading, setLoading] = useState(true);
@@ -45,26 +46,46 @@ export default function VacacionesPage() {
   const [solicitudAAprobar, setSolicitudAAprobar] = useState<SolicitudVacacionesDto | null>(null);
   const [solicitudARechazar, setSolicitudARechazar] = useState<SolicitudVacacionesDto | null>(null);
 
+  // Fetch de catálogos para filtros dinámicos (RF-0004)
+  useEffect(() => {
+    async function cargarCatalogos() {
+      try {
+        // Carga dinámica de empleados desde /api/empleados
+        const resEmpleados = await empleadosApi.listar();
+        setEmpleados(resEmpleados || []);
+
+        if (resEmpleados && resEmpleados.length > 0 && !selectedSaldoEmpleadoId) {
+          setSelectedSaldoEmpleadoId(resEmpleados[0].id);
+          cargarSaldo(resEmpleados[0].id);
+        }
+      } catch (err) {
+        console.error('Error al cargar empleados para filtro de vacaciones', err);
+      }
+
+      // Catálogo de estados de vacaciones
+      // TODO: Si en el futuro se crea el endpoint /api/catalogos/estados-vacaciones en .NET, reemplazar este fallback
+      setEstadosVacaciones([
+        { id: EstadoVacaciones.Pendiente, nombre: 'Pendiente' },
+        { id: EstadoVacaciones.Aprobada, nombre: 'Aprobada' },
+        { id: EstadoVacaciones.Rechazada, nombre: 'Rechazada' },
+        { id: EstadoVacaciones.Gozada, nombre: 'Gozada' },
+      ]);
+    }
+
+    cargarCatalogos();
+  }, []);
+
   const cargarDatos = async () => {
     setLoading(true);
     try {
-      const [resVacaciones, resEmpleados] = await Promise.all([
-        vacacionesApi.listar({
-          empleadoId: selectedEmpleadoId,
-          estado: selectedEstado,
-          pageSize: 100,
-        }),
-        empleadosApi.listar(),
-      ]);
+      const resVacaciones = await vacacionesApi.listar({
+        empleadoId: selectedEmpleadoId,
+        estado: selectedEstado,
+        pageSize: 100,
+      });
 
       setSolicitudes(resVacaciones.items || []);
       setTotalSolicitudes(resVacaciones.totalItems || 0);
-      setEmpleados(resEmpleados || []);
-
-      if (resEmpleados.length > 0 && !selectedSaldoEmpleadoId) {
-        setSelectedSaldoEmpleadoId(resEmpleados[0].id);
-        cargarSaldo(resEmpleados[0].id);
-      }
     } catch (err) {
       console.error('Error al cargar vacaciones', err);
     } finally {
@@ -170,69 +191,130 @@ export default function VacacionesPage() {
         </div>
 
         {/* Live Employee Balance Rediseñado (RF-0004) */}
-        <div className="bg-slate-900 text-white p-6 sm:p-7 rounded-3xl border border-slate-800 shadow-sm relative overflow-hidden">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-5 border-b border-slate-800/80">
+        <div className="bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-white p-6 sm:p-8 rounded-3xl border border-slate-800 shadow-xl relative overflow-hidden">
+          {/* Header del Card */}
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-slate-800/80 relative z-10">
             <div>
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[11px] font-semibold mb-1">
-                <Sparkles className="w-3 h-3" />
-                Cómputo Salarial en Vivo (RF-0004)
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-400/25 text-blue-400 text-xs font-semibold mb-2 shadow-inner">
+                <Sparkles className="w-3.5 h-3.5 text-blue-400" />
+                <span>Cómputo Salarial en Tiempo Real • Ley No. 185</span>
               </div>
-              <h3 className="text-lg font-extrabold tracking-tight text-white">
+              <h3 className="text-xl sm:text-2xl font-black tracking-tight text-white">
                 Disponibilidad y Saldo Vacacional por Colaborador
               </h3>
-              <p className="text-xs text-slate-400 mt-0.5">
-                Cálculo conforme a la ley laboral: 2.5 días por mes trabajado (30 días por año de antigüedad)
+              <p className="text-xs sm:text-sm text-slate-400 mt-1 max-w-2xl leading-relaxed">
+                Control estricto previo a autorización conforme al Art. 76: Cómputo de 2.5 días hábiles por mes laborado (30 días por año).
               </p>
             </div>
 
             <div className="flex items-center gap-3">
-              <select
-                value={selectedSaldoEmpleadoId || ''}
-                onChange={(e) => handleSaldoEmpleadoChange(Number(e.target.value))}
-                className="px-3.5 py-2 bg-slate-800/90 hover:bg-slate-800 border border-slate-700/80 rounded-xl text-xs text-slate-200 focus:outline-hidden focus:ring-2 focus:ring-blue-500 transition-colors"
-              >
-                {empleados.map((emp) => (
-                  <option key={emp.id} value={emp.id}>
-                    {emp.nombreCompleto} ({emp.cargo})
-                  </option>
-                ))}
-              </select>
-              {saldoLoading && <Loader2 className="w-4 h-4 animate-spin text-blue-400" />}
+              <div className="relative">
+                <select
+                  value={selectedSaldoEmpleadoId || ''}
+                  onChange={(e) => handleSaldoEmpleadoChange(Number(e.target.value))}
+                  aria-label="Seleccionar colaborador para cálculo de saldo"
+                  className="px-4 py-2.5 bg-slate-800/90 hover:bg-slate-800 border border-slate-700 rounded-xl text-xs sm:text-sm font-medium text-slate-100 focus:outline-hidden focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 transition-all shadow-inner cursor-pointer"
+                >
+                  {empleados.map((emp) => (
+                    <option key={emp.id} value={emp.id}>
+                      {emp.nombreCompleto} ({emp.cargo})
+                    </option>
+                  ))}
+                </select>
+              </div>
+              {saldoLoading && <Loader2 className="w-4 h-4 animate-spin text-blue-400 shrink-0" />}
             </div>
           </div>
 
+          {/* Grid de 4 Indicadores con Jerarquía Visual de Impacto */}
           {saldoDetalle && (
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-5">
-              <div className="bg-slate-800/60 border border-slate-800 p-4 rounded-2xl">
-                <p className="text-[11px] text-slate-400 uppercase font-semibold">Días Acumulados</p>
-                <p className="text-2xl font-black text-slate-100 mt-1">
-                  {saldoDetalle.diasAcumulados.toFixed(1)} <span className="text-xs text-slate-400 font-normal">días</span>
-                </p>
-                <p className="text-[11px] text-slate-500 mt-1">Total ganado por antigüedad</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5 mt-6 relative z-10">
+              {/* 1. Días Acumulados */}
+              <div className="bg-slate-900/90 border border-slate-800/90 hover:border-slate-700/80 p-5 rounded-2xl flex flex-col justify-between transition-all shadow-sm">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                    Días Acumulados
+                  </span>
+                  <span className="w-2 h-2 rounded-full bg-blue-500" />
+                </div>
+                <div className="my-3">
+                  <div className="flex items-baseline gap-1.5">
+                    <span className="text-3xl font-black text-white tracking-tight">
+                      {saldoDetalle.diasAcumulados.toFixed(1)}
+                    </span>
+                    <span className="text-xs text-slate-400 font-semibold">días</span>
+                  </div>
+                </div>
+                <div className="pt-2 border-t border-slate-800/60 text-[11px] text-slate-400 font-medium">
+                  Ganados por antigüedad laboral
+                </div>
               </div>
 
-              <div className="bg-slate-800/60 border border-slate-800 p-4 rounded-2xl">
-                <p className="text-[11px] text-slate-400 uppercase font-semibold">Días Gozados</p>
-                <p className="text-2xl font-black text-slate-300 mt-1">
-                  {saldoDetalle.diasGozados} <span className="text-xs text-slate-400 font-normal">días</span>
-                </p>
-                <p className="text-[11px] text-slate-500 mt-1">Descontados formalmente</p>
+              {/* 2. Días Gozados */}
+              <div className="bg-slate-900/90 border border-slate-800/90 hover:border-slate-700/80 p-5 rounded-2xl flex flex-col justify-between transition-all shadow-sm">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                    Días Gozados
+                  </span>
+                  <span className="w-2 h-2 rounded-full bg-indigo-500" />
+                </div>
+                <div className="my-3">
+                  <div className="flex items-baseline gap-1.5">
+                    <span className="text-3xl font-black text-slate-200 tracking-tight">
+                      {saldoDetalle.diasGozados}
+                    </span>
+                    <span className="text-xs text-slate-400 font-semibold">días</span>
+                  </div>
+                </div>
+                <div className="pt-2 border-t border-slate-800/60 text-[11px] text-slate-400 font-medium">
+                  Disfrutados y formalizados
+                </div>
               </div>
 
-              <div className="bg-slate-800/60 border border-slate-800 p-4 rounded-2xl">
-                <p className="text-[11px] text-amber-400 uppercase font-semibold">En Solicitud</p>
-                <p className="text-2xl font-black text-amber-400 mt-1">
-                  {saldoDetalle.diasPendientes} <span className="text-xs text-slate-400 font-normal">días</span>
-                </p>
-                <p className="text-[11px] text-slate-500 mt-1">En espera de autorización</p>
+              {/* 3. En Solicitud */}
+              <div className="bg-slate-900/90 border border-amber-500/25 hover:border-amber-500/40 p-5 rounded-2xl flex flex-col justify-between transition-all shadow-sm">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold text-amber-400 uppercase tracking-wider">
+                    En Solicitud
+                  </span>
+                  <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+                </div>
+                <div className="my-3">
+                  <div className="flex items-baseline gap-1.5">
+                    <span className="text-3xl font-black text-amber-400 tracking-tight">
+                      {saldoDetalle.diasPendientes}
+                    </span>
+                    <span className="text-xs text-amber-400/80 font-semibold">días</span>
+                  </div>
+                </div>
+                <div className="pt-2 border-t border-amber-500/20 text-[11px] text-amber-400/90 font-medium">
+                  En proceso de revisión por RRHH
+                </div>
               </div>
 
-              <div className="bg-emerald-950/60 border border-emerald-500/40 p-4 rounded-2xl">
-                <p className="text-[11px] text-emerald-400 uppercase font-bold">Saldo Disponible Real</p>
-                <p className="text-3xl font-black text-emerald-300 mt-1">
-                  {saldoDetalle.saldoDisponible.toFixed(1)} <span className="text-xs text-emerald-400 font-normal">días</span>
-                </p>
-                <p className="text-[11px] text-emerald-400/80 mt-1">Margen libre para programar</p>
+              {/* 4. SALDO DISPONIBLE REAL (Elemento Protagonista Pro Max) */}
+              <div className="bg-gradient-to-br from-emerald-950/80 via-emerald-900/40 to-slate-900 border-2 border-emerald-500/60 p-5 rounded-2xl flex flex-col justify-between transition-all shadow-lg shadow-emerald-950/50 hover:shadow-emerald-900/60 relative overflow-hidden">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-extrabold text-emerald-300 uppercase tracking-wider flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 ring-2 ring-emerald-400/30" />
+                    Saldo Disponible Real
+                  </span>
+                  <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-full font-bold border border-emerald-500/30">
+                    DISPONIBLE
+                  </span>
+                </div>
+                <div className="my-2.5">
+                  <div className="flex items-baseline gap-1.5">
+                    <span className="text-4xl sm:text-5xl font-black text-emerald-400 tracking-tight drop-shadow-sm">
+                      {saldoDetalle.saldoDisponible.toFixed(1)}
+                    </span>
+                    <span className="text-sm font-bold text-emerald-300/90">días hábiles</span>
+                  </div>
+                </div>
+                <div className="pt-2 border-t border-emerald-500/30 text-[11px] font-semibold text-emerald-300 flex items-center justify-between">
+                  <span>Margen neto programable</span>
+                  <span className="text-emerald-400">Ley 185</span>
+                </div>
               </div>
             </div>
           )}
@@ -271,10 +353,11 @@ export default function VacacionesPage() {
               className="px-3 py-2 bg-slate-50/80 hover:bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-700 focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
             >
               <option value="">Todos los Estados</option>
-              <option value={EstadoVacaciones.Pendiente}>Pendiente</option>
-              <option value={EstadoVacaciones.Aprobada}>Aprobada</option>
-              <option value={EstadoVacaciones.Rechazada}>Rechazada</option>
-              <option value={EstadoVacaciones.Gozada}>Gozada</option>
+              {estadosVacaciones.map((est) => (
+                <option key={est.id} value={est.id}>
+                  {est.nombre}
+                </option>
+              ))}
             </select>
 
             {hayFiltrosActivos && (
