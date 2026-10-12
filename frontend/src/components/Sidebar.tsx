@@ -52,7 +52,8 @@ export default function Sidebar() {
   };
 
   return (
-    <aside className="w-64 bg-slate-900 text-slate-100 flex flex-col flex-shrink-0 min-h-screen border-r border-slate-800">
+    <>
+      <aside className="w-64 bg-slate-900 text-slate-100 flex flex-col shrink-0 h-screen fixed top-0 left-0 overflow-hidden border-r border-slate-800 z-30">
       {/* Brand Header */}
       <div className="p-6 border-b border-slate-800 flex items-center gap-3">
         <div className="w-10 h-10 rounded-lg bg-blue-600 flex items-center justify-center text-white shadow-md shadow-blue-500/20">
@@ -133,16 +134,12 @@ export default function Sidebar() {
       </div>
 
       {/* Footer minimalista */}
-      <div className="px-4 py-3 border-t border-slate-800/80 text-[11px] text-slate-500 flex items-center justify-between">
+      <div className="px-4 py-3 border-t border-slate-800/80 text-[11px] text-slate-500 text-center">
         <span>Torno Morales • v2.0</span>
-        <button
-          onClick={logout}
-          className="text-slate-400 hover:text-red-400 flex items-center gap-1 transition-colors text-[11px] cursor-pointer"
-        >
-          <LogOut className="w-3 h-3" />
-          <span>Salir</span>
-        </button>
       </div>
     </aside>
+    {/* Spacer para mantener el flujo del layout mientras el sidebar permanece fijo */}
+    <div className="w-64 shrink-0 hidden md:block" aria-hidden="true" />
+  </>
   );
 }
