@@ -44,7 +44,15 @@ export default function LoginPage() {
 
     try {
       setIsLoading(true);
-      const res = await login({ nombreUsuario: nombreUsuario.trim(), password });
+
+      // Encriptación/codificación del valor antes de viajar por la red en el payload HTTP
+      const encryptedPassword = `enc:${btoa(unescape(encodeURIComponent(password)))}`;
+
+      const res = await login({ 
+        nombreUsuario: nombreUsuario.trim(), 
+        password: encryptedPassword 
+      });
+
       if (res.requiereTotp) {
         setRequiereTotp(true);
         setTotpUsuarioId(res.usuarioId || null);

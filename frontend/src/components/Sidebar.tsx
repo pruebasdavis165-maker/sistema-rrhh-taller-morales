@@ -64,8 +64,38 @@ export default function Sidebar() {
         </div>
       </div>
 
+      {/* User Info & Immediate Logout Block (Ergonomía Superior) */}
+      <div className="mx-3 mt-4 mb-2 p-3 rounded-xl bg-slate-950/70 border border-slate-800/80 shadow-inner">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2.5 overflow-hidden min-w-0">
+            <div className="w-8 h-8 rounded-lg bg-blue-600/20 border border-blue-500/30 flex items-center justify-center text-blue-400 text-xs font-bold shrink-0">
+              {getInitials(user?.nombreCompleto)}
+            </div>
+            <div className="truncate min-w-0">
+              <p className="text-xs font-medium text-white truncate leading-tight">
+                {user?.nombreCompleto || 'Usuario'}
+              </p>
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                <span className="text-[10px] text-blue-400 font-medium truncate uppercase tracking-wider">
+                  {user?.rol || 'Sesión Activa'}
+                </span>
+              </div>
+            </div>
+          </div>
+          <button
+            onClick={logout}
+            title="Cerrar sesión"
+            aria-label="Cerrar sesión"
+            className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-slate-800/80 rounded-lg transition-colors shrink-0 cursor-pointer"
+          >
+            <LogOut className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+
       {/* Navigation Links */}
-      <div className="flex-1 py-6 px-3 space-y-1">
+      <div className="flex-1 py-3 px-3 space-y-1 overflow-y-auto">
         <div className="px-3 pb-2 text-[11px] font-semibold tracking-wider text-slate-400 uppercase">
           Módulos Principales
         </div>
@@ -102,26 +132,16 @@ export default function Sidebar() {
         })}
       </div>
 
-      {/* User Info / Logout Footer */}
-      <div className="p-4 border-t border-slate-800 bg-slate-950/50">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3 overflow-hidden">
-            <div className="w-8 h-8 rounded-full bg-blue-500/20 border border-blue-400/30 flex items-center justify-center text-blue-300 text-xs font-bold shrink-0">
-              {getInitials(user?.nombreCompleto)}
-            </div>
-            <div className="truncate">
-              <p className="text-xs font-semibold text-white truncate">{user?.nombreCompleto || 'Usuario'}</p>
-              <p className="text-[11px] text-blue-400 truncate">{user?.rol || 'Sesión Activa'}</p>
-            </div>
-          </div>
-          <button
-            onClick={logout}
-            title="Cerrar sesión"
-            className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-slate-800 rounded-md transition-colors shrink-0 ml-2"
-          >
-            <LogOut className="w-4 h-4" />
-          </button>
-        </div>
+      {/* Footer minimalista */}
+      <div className="px-4 py-3 border-t border-slate-800/80 text-[11px] text-slate-500 flex items-center justify-between">
+        <span>Torno Morales • v2.0</span>
+        <button
+          onClick={logout}
+          className="text-slate-400 hover:text-red-400 flex items-center gap-1 transition-colors text-[11px] cursor-pointer"
+        >
+          <LogOut className="w-3 h-3" />
+          <span>Salir</span>
+        </button>
       </div>
     </aside>
   );
