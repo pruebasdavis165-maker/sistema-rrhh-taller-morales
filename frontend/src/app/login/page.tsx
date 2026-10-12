@@ -86,18 +86,12 @@ export default function LoginPage() {
         </div>
 
         <div className="space-y-6 max-w-lg">
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-500/10 border border-blue-400/20 text-blue-300 text-xs font-medium">
-            <ShieldCheck className="w-4 h-4" />
-            <span>Sistema Seguro de Recursos Humanos</span>
-          </div>
           <h2 className="text-3xl font-extrabold text-white tracking-tight leading-tight">
             Gestión Integral de Contratos, Vacaciones y Personal Técnico.
           </h2>
           <p className="text-sm text-slate-400 leading-relaxed">
             Plataforma corporativa para el control de expedientes laborales, cumplimiento estricto del Código del Trabajo de Nicaragua.
           </p>
-
-          
         </div>
 
         <div className="text-xs text-slate-500">
@@ -106,17 +100,17 @@ export default function LoginPage() {
       </div>
 
       {/* Columna Derecha: Formulario de Autenticación */}
-      <div className="flex-1 flex items-center justify-center p-6 sm:p-12 bg-slate-900">
-        <div className="w-full max-w-md space-y-8">
-          <div className="text-center lg:text-left">
+      <div className="flex-1 flex flex-col items-center justify-center p-6 sm:p-12 bg-slate-900">
+        <div className="w-full max-w-md mx-auto flex flex-col justify-center space-y-8">
+          <div className="text-center">
             <div className="lg:hidden flex items-center justify-center gap-3 mb-6">
               <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white shadow-md">
                 <Wrench className="w-5 h-5" />
               </div>
               <span className="font-bold text-white text-base">Taller de Torno Morales López</span>
             </div>
-            <h2 className="text-2xl font-bold tracking-tight text-white">Iniciar Sesión</h2>
-            <p className="text-xs sm:text-sm text-slate-400 mt-1">
+            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">Iniciar Sesión</h2>
+            <p className="text-xs sm:text-sm text-slate-400 mt-2 max-w-sm mx-auto">
               Ingrese sus credenciales corporativas para acceder al sistema
             </p>
           </div>
