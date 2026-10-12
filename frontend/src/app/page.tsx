@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Header from '@/components/Header';
+import { useAuth } from '@/context/AuthContext';
 import { dashboardApi, auditoriaApi } from '@/lib/api';
 import {
   DashboardAnaliticaDto,
@@ -46,6 +47,7 @@ import {
 const SPECIALTY_COLORS = ['#2563eb', '#0d9488', '#f59e0b', '#8b5cf6', '#ec4899', '#64748b'];
 
 export default function DashboardPage() {
+  const { user } = useAuth();
   const [analitica, setAnalitica] = useState<DashboardAnaliticaDto | null>(null);
   const [actividades, setActividades] = useState<AuditoriaDto[]>([]);
   const [loading, setLoading] = useState(true);
@@ -92,7 +94,7 @@ export default function DashboardPage() {
           <div className="relative z-10 max-w-2xl">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/20 border border-blue-400/30 text-blue-300 text-xs font-semibold mb-3">
               <Wrench className="w-3.5 h-3.5" />
-              Taller de Torno Morales López • Operaciones de Tornería y Mecanizado
+              <span>Bienvenido, {user?.nombreCompleto || 'Usuario'} - Panel de {user?.rol || 'Gestión'}</span>
             </div>
             <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
               Control Integral de Personal y Analítica de RRHH
