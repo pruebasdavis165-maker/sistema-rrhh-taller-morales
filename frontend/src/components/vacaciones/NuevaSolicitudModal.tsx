@@ -10,9 +10,15 @@ interface NuevaSolicitudModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
+  initialEmpleadoId?: number | null;
 }
 
-export default function NuevaSolicitudModal({ isOpen, onClose, onSuccess }: NuevaSolicitudModalProps) {
+export default function NuevaSolicitudModal({
+  isOpen,
+  onClose,
+  onSuccess,
+  initialEmpleadoId,
+}: NuevaSolicitudModalProps) {
   const [empleados, setEmpleados] = useState<EmpleadoDto[]>([]);
   const [loading, setLoading] = useState(false);
   const [saldoLoading, setSaldoLoading] = useState(false);
@@ -53,15 +59,21 @@ export default function NuevaSolicitudModal({ isOpen, onClose, onSuccess }: Nuev
   useEffect(() => {
     if (isOpen) {
       empleadosApi.listar().then((data) => {
-        setEmpleados(data);
-        if (data.length > 0 && formData.empleadoId === 0) {
-          const primer = data[0];
-          setFormData((prev) => ({ ...prev, empleadoId: primer.id }));
-          cargarSaldo(primer.id);
+        setEmpleados(data || []);
+        if (data && data.length > 0) {
+          const targetId =
+            initialEmpleadoId && data.some((d) => d.id === initialEmpleadoId)
+              ? initialEmpleadoId
+              : formData.empleadoId && data.some((d) => d.id === formData.empleadoId)
+              ? formData.empleadoId
+              : data[0].id;
+
+          setFormData((prev) => ({ ...prev, empleadoId: targetId }));
+          cargarSaldo(targetId);
         }
       });
     }
-  }, [isOpen]);
+  }, [isOpen, initialEmpleadoId]);
 
   const handleEmpleadoChange = (empId: number) => {
     setFormData((prev) => ({ ...prev, empleadoId: empId }));
@@ -143,35 +155,47 @@ export default function NuevaSolicitudModal({ isOpen, onClose, onSuccess }: Nuev
           </select>
         </div>
 
-        {/* Saldo de Vacaciones Card (RF-0004 Live Feedback) */}
-        <div className="p-4 bg-slate-900 text-slate-100 rounded-2xl border border-slate-800 shadow-xs">
-          <div className="flex items-center justify-between pb-2 border-b border-slate-800/80">
-            <span className="text-xs font-bold text-blue-400 flex items-center gap-1.5">
-              <Palmtree className="w-4 h-4" />
+        {/* Saldo de Vacaciones Card (RF-0004 Live Feedback - Tema Claro) */}
+        <div className="p-4 bg-slate-50 border border-slate-200/90 rounded-2xl shadow-xs">
+          <div className="flex items-center justify-between pb-2.5 border-b border-slate-200/80">
+            <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+              <Palmtree className="w-4 h-4 text-emerald-600" />
               Estado de Saldo en Nómina (RF-0004)
             </span>
-            {saldoLoading && <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-400" />}
+            {saldoLoading && <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-600" />}
           </div>
 
           {saldo && (
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mt-3 text-center">
-              <div className="bg-slate-800/70 border border-slate-700/60 p-2.5 rounded-xl">
-                <p className="text-[10px] text-slate-400 uppercase font-semibold">Acumulados</p>
-                <p className="text-sm font-bold text-slate-100 mt-0.5">{saldo.diasAcumulados.toFixed(1)} <span className="text-[10px] text-slate-400 font-normal">días</span></p>
+              <div className="bg-white border border-slate-200 p-2.5 rounded-xl shadow-2xs">
+                <p className="text-[10px] text-slate-500 uppercase font-semibold">Acumulados</p>
+                <p className="text-sm font-bold text-slate-800 mt-0.5">
+                  {saldo.diasAcumulados.toFixed(1)} <span className="text-[10px] text-slate-500 font-normal">días</span>
+                </p>
               </div>
 
-              <div className="bg-slate-800/70 border border-slate-700/60 p-2.5 rounded-xl">
-                <p className="text-[10px] text-slate-400 uppercase font-semibold">Gozados</p>
-                <p className="text-sm font-bold text-slate-300 mt-0.5">{saldo.diasGozados} <span className="text-[10px] text-slate-400 font-normal">días</span></p>
+              <div className="bg-white border border-slate-200 p-2.5 rounded-xl shadow-2xs">
+                <p className="text-[10px] text-slate-500 uppercase font-semibold">Gozados</p>
+                <p className="text-sm font-bold text-slate-700 mt-0.5">
+                  {saldo.diasGozados} <span className="text-[10px] text-slate-500 font-normal">días</span>
+                </p>
               </div>
 
-              <div className="bg-slate-800/70 border border-slate-700/60 p-2.5 rounded-xl">
-                <p className="text-[10px] text-amber-400 uppercase font-semibold">Pendientes</p>
-                <p className="text-sm font-bold text-amber-400 mt-0.5">{saldo.diasPendientes} <span className="text-[10px] text-amber-400/80 font-normal">días</span></p>
+              <div className="bg-amber-50/50 border border-amber-200/80 p-2.5 rounded-xl shadow-2xs">
+                <p className="text-[10px] text-amber-800 uppercase font-semibold">Pendientes</p>
+                <p className="text-sm font-bold text-amber-800 mt-0.5">
+                  {saldo.diasPendientes} <span className="text-[10px] text-amber-700/80 font-normal">días</span>
+                </p>
               </div>
 
-              <div className={`p-2.5 rounded-xl border ${saldo.saldoDisponible >= formData.diasSolicitados ? 'bg-emerald-950/70 border-emerald-500/40 text-emerald-300' : 'bg-rose-950/70 border-rose-500/40 text-rose-300'}`}>
-                <p className="text-[10px] uppercase font-bold">Disponible</p>
+              <div
+                className={`p-2.5 rounded-xl border shadow-2xs ${
+                  saldo.saldoDisponible >= formData.diasSolicitados
+                    ? 'bg-emerald-50/70 border-emerald-300 text-emerald-800'
+                    : 'bg-rose-50/70 border-rose-300 text-rose-800'
+                }`}
+              >
+                <p className="text-[10px] uppercase font-bold tracking-wide">Disponible</p>
                 <p className="text-base font-extrabold mt-0.5">
                   {saldo.saldoDisponible.toFixed(1)} <span className="text-[10px] font-normal">días</span>
                 </p>
