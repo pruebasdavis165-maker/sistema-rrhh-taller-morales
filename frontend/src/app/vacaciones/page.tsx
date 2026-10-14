@@ -23,7 +23,6 @@ import {
   X,
   TrendingUp,
   FilterX,
-  Sparkles,
 } from 'lucide-react';
 
 function VacacionesContent() {
@@ -43,11 +42,20 @@ function VacacionesContent() {
   const [selectedEstado, setSelectedEstado] = useState<number | undefined>();
   const [searchTerm, setSearchTerm] = useState(searchParams?.get('q') || '');
 
-  // Sincronizar parámetro de búsqueda ?q=
+  // Sincronizar parámetros de búsqueda (?q= y ?empleadoId=)
   useEffect(() => {
     const q = searchParams?.get('q');
     if (q !== null && q !== undefined) {
       setSearchTerm(q);
+    }
+    const empIdParam = searchParams?.get('empleadoId');
+    if (empIdParam) {
+      const empId = Number(empIdParam);
+      if (!isNaN(empId) && empId > 0) {
+        setSelectedSaldoEmpleadoId(empId);
+        setSelectedEmpleadoId(empId);
+        cargarSaldo(empId);
+      }
     }
   }, [searchParams]);
 
@@ -64,7 +72,14 @@ function VacacionesContent() {
         const resEmpleados = await empleadosApi.listar();
         setEmpleados(resEmpleados || []);
 
-        if (resEmpleados && resEmpleados.length > 0 && !selectedSaldoEmpleadoId) {
+        const empIdParam = searchParams?.get('empleadoId');
+        const queryEmpId = empIdParam ? Number(empIdParam) : null;
+
+        if (queryEmpId && !isNaN(queryEmpId) && resEmpleados?.some((e) => e.id === queryEmpId)) {
+          setSelectedSaldoEmpleadoId(queryEmpId);
+          setSelectedEmpleadoId(queryEmpId);
+          cargarSaldo(queryEmpId);
+        } else if (resEmpleados && resEmpleados.length > 0 && !selectedSaldoEmpleadoId) {
           setSelectedSaldoEmpleadoId(resEmpleados[0].id);
           cargarSaldo(resEmpleados[0].id);
         }
@@ -205,16 +220,9 @@ function VacacionesContent() {
           {/* Header del Card */}
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-slate-100 relative z-10">
             <div>
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-xs font-semibold mb-2 shadow-xs">
-                <Sparkles className="w-3.5 h-3.5 text-blue-600" />
-                <span>Cómputo Salarial en Tiempo Real • Ley No. 185</span>
-              </div>
               <h3 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
                 Disponibilidad y Saldo Vacacional por Colaborador
               </h3>
-              <p className="text-xs sm:text-sm text-slate-500 mt-1 max-w-2xl leading-relaxed">
-                Control estricto previo a autorización conforme al Art. 76: Cómputo de 2.5 días hábiles por mes laborado (30 días por año).
-              </p>
             </div>
 
             <div className="flex items-center gap-3">
@@ -512,6 +520,7 @@ function VacacionesContent() {
       <NuevaSolicitudModal
         isOpen={isNuevaModalOpen}
         onClose={() => setIsNuevaModalOpen(false)}
+        initialEmpleadoId={selectedSaldoEmpleadoId}
         onSuccess={() => {
           cargarDatos();
           if (selectedSaldoEmpleadoId) cargarSaldo(selectedSaldoEmpleadoId);
