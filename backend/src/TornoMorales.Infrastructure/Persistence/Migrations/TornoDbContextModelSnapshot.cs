@@ -225,6 +225,59 @@ namespace TornoMorales.Infrastructure.Persistence.Migrations
                     b.ToTable("ExpedientesLaborales", (string)null);
                 });
 
+            modelBuilder.Entity("TornoMorales.Domain.Entities.JornadaExtraordinaria", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("EmpleadoId")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal>("FactorPago")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateOnly>("Fecha")
+                        .HasColumnType("date");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<decimal>("Horas")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("HorasJornadaDiaria")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("MontoTotal")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("Motivo")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<decimal>("SalarioBaseMensual")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("TipoJornada")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal>("ValorHoraExtra")
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<decimal>("ValorHoraOrdinaria")
+                        .HasColumnType("decimal(18,4)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EmpleadoId");
+
+                    b.ToTable("JornadasExtraordinarias", (string)null);
+                });
+
             modelBuilder.Entity("TornoMorales.Domain.Entities.Liquidacion", b =>
                 {
                     b.Property<int>("Id")
@@ -482,6 +535,17 @@ namespace TornoMorales.Infrastructure.Persistence.Migrations
                     b.HasOne("TornoMorales.Domain.Entities.Empleado", "Empleado")
                         .WithOne("ExpedienteLaboral")
                         .HasForeignKey("TornoMorales.Domain.Entities.ExpedienteLaboral", "EmpleadoId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Empleado");
+                });
+
+            modelBuilder.Entity("TornoMorales.Domain.Entities.JornadaExtraordinaria", b =>
+                {
+                    b.HasOne("TornoMorales.Domain.Entities.Empleado", "Empleado")
+                        .WithMany()
+                        .HasForeignKey("EmpleadoId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 

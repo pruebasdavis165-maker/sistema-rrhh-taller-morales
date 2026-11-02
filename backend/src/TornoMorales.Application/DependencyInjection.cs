@@ -3,9 +3,10 @@ using TornoMorales.Application.Contratos.Interfaces;
 using TornoMorales.Application.Contratos.Services;
 using TornoMorales.Application.Liquidaciones.Interfaces;
 using TornoMorales.Application.Liquidaciones.Services;
+using TornoMorales.Application.Planilla.Interfaces;
+using TornoMorales.Application.Planilla.Services;
 using TornoMorales.Application.Vacaciones.Interfaces;
 using TornoMorales.Application.Vacaciones.Services;
-
 using TornoMorales.Application.Services;
 
 namespace TornoMorales.Application;
@@ -17,6 +18,7 @@ public static class DependencyInjection
         services.AddScoped<IContratoService, ContratoService>();
         services.AddScoped<IVacacionesService, VacacionesService>();
         services.AddScoped<ILiquidacionService, LiquidacionService>();
+        services.AddScoped<IPlanillaService, PlanillaService>();
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IDashboardService, DashboardService>();
         services.AddScoped<ITotpService, TotpService>();
