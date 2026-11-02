@@ -2,6 +2,8 @@
 
 > **Plataforma Web Integral** para la gestión de contratos laborales, control de vacaciones remuneradas, expedientes digitales y analítica de personal para el taller de torno y mecanizado industrial **Morales López** (Managua, Nicaragua).
 
+**Versión Actual:** `v1.2.0`
+
 ---
 
 ## 📋 Tabla de Contenidos
@@ -24,6 +26,8 @@
 ---
 
 ## 🚀 Características Principales
+
+- **Portal de Autogestión:** Acceso restringido para el rol Empleado, permitiendo la consulta individual de expedientes, descarga de colillas de pago y seguimiento de vacaciones mediante políticas de autorización basadas en recursos.
 
 - **Gestión Contractual Anti-solapamiento (RF-0005):** Validación matemática en dominio y base de datos que imposibilita la concurrencia o solapamiento temporal de contratos vigentes para un mismo operario.
 - **Control y Cómputo de Vacaciones (RF-0004):** Cálculo exacto de descansos devengados conforme a ley (2.5 días por mes / 30 días anuales) con verificación en tiempo real del saldo disponible antes de aprobar cualquier solicitud.
