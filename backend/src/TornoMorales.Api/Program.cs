@@ -5,13 +5,20 @@ using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using QuestPDF.Infrastructure;
 using TornoMorales.Api.Data;
+using TornoMorales.Api.Hubs;
 using TornoMorales.Api.Middleware;
 using TornoMorales.Api.Security;
+using TornoMorales.Api.Services;
 using TornoMorales.Application;
 using TornoMorales.Application.Common.Security;
+using TornoMorales.Application.Services;
 using TornoMorales.Infrastructure;
 using TornoMorales.Infrastructure.Persistence;
+
+// ── Licencia QuestPDF (Comunitaria) ─────────────────────────────────────────
+QuestPDF.Settings.License = LicenseType.Community;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -41,8 +48,9 @@ builder.Services.AddRateLimiter(options =>
     });
 });
 
-// Controllers
+// Controllers & SignalR
 builder.Services.AddControllers();
+builder.Services.AddSignalR();
 builder.Services.AddEndpointsApiExplorer();
 
 // Swagger con soporte para JWT Bearer
@@ -52,7 +60,7 @@ builder.Services.AddSwaggerGen(options =>
     {
         Title = "Torno Morales RRHH API",
         Version = "v1",
-        Description = "API REST — Gestión de RRHH (Arquitectura Hexagonal + PostgreSQL + JWT + Cookies HTTP-Only)"
+        Description = "API REST — Gestión de RRHH (Arquitectura Hexagonal + PostgreSQL + JWT + Cookies HTTP-Only + SignalR + QuestPDF)"
     });
 
     options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
@@ -92,6 +100,9 @@ builder.Services.AddSwaggerGen(options =>
 builder.Services.AddApplicationServices();
 builder.Services.AddInfrastructureServices(builder.Configuration);
 
+// Servicio de Notificaciones en Tiempo Real (SignalR)
+builder.Services.AddScoped<INotificacionRealTimeService, SignalRNotificacionRealTimeService>();
+
 // Generador de tokens JWT
 builder.Services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
 
@@ -125,7 +136,7 @@ builder.Services.AddAuthentication(options =>
         ClockSkew = TimeSpan.Zero
     };
 
-    // Extraer JWT de la cookie HTTP-only si no viene en el header Authorization
+    // Extraer JWT de la cookie HTTP-only o query parameter para WebSockets/SignalR
     options.Events = new JwtBearerEvents
     {
         OnMessageReceived = context =>
@@ -134,6 +145,15 @@ builder.Services.AddAuthentication(options =>
             {
                 context.Token = tokenCookie;
             }
+
+            // Soporte para autenticación en WebSockets de SignalR
+            var accessToken = context.Request.Query["access_token"];
+            var path = context.HttpContext.Request.Path;
+            if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs"))
+            {
+                context.Token = accessToken;
+            }
+
             return Task.CompletedTask;
         }
     };
@@ -181,4 +201,8 @@ app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+
+// Mapeo del Hub de SignalR para notificaciones en tiempo real
+app.MapHub<NotificacionesHub>("/hubs/notificaciones");
+
 app.Run();

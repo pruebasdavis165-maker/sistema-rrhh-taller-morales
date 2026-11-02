@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useRef, useEffect, Suspense } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
-import { Bell, Search, CheckCircle2, X } from 'lucide-react';
+import { Search, X } from 'lucide-react';
+import NotificationCenter from './NotificationCenter';
 
 interface HeaderProps {
   title: string;
@@ -15,8 +16,6 @@ function HeaderContent({ title, subtitle, onSearch }: HeaderProps) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [searchTerm, setSearchTerm] = useState(searchParams?.get('q') || '');
-  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Sincronizar el campo de búsqueda con el parámetro de URL ?q=
   useEffect(() => {
@@ -61,22 +60,6 @@ function HeaderContent({ title, subtitle, onSearch }: HeaderProps) {
     }
   };
 
-  // Cerrar el dropdown al hacer click afuera
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsNotificationsOpen(false);
-      }
-    };
-
-    if (isNotificationsOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [isNotificationsOpen]);
-
   return (
     <header className="h-16 bg-white border-b border-slate-200/80 px-8 flex items-center justify-between flex-shrink-0 sticky top-0 z-30 shadow-xs top-navbar">
       <div>
@@ -108,43 +91,8 @@ function HeaderContent({ title, subtitle, onSearch }: HeaderProps) {
           )}
         </form>
 
-        {/* Notificaciones Interactivas con Dropdown (rounded-xl) */}
-        <div className="relative" ref={dropdownRef}>
-          <button
-            type="button"
-            onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
-            title="Notificaciones"
-            aria-label="Notificaciones"
-            className={`relative p-2 rounded-lg transition-colors cursor-pointer ${
-              isNotificationsOpen
-                ? 'bg-blue-50 text-[#1A56DB]'
-                : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100'
-            }`}
-          >
-            <Bell className="w-4 h-4" />
-            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-[#1A56DB] rounded-full" />
-          </button>
-
-          {isNotificationsOpen && (
-            <div className="absolute right-0 mt-2 w-80 rounded-xl bg-white border border-slate-200/90 shadow-xl py-3 px-4 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
-              <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-100">
-                <span className="text-xs font-bold text-slate-800 uppercase tracking-wider font-heading">
-                  Notificaciones
-                </span>
-                <span className="text-[10px] text-[#1A56DB] font-semibold bg-blue-50 px-2 py-0.5 rounded-full border border-blue-100">
-                  0 no leídas
-                </span>
-              </div>
-              <div className="py-6 flex flex-col items-center justify-center text-center text-slate-400">
-                <div className="w-9 h-9 rounded-full bg-slate-50 flex items-center justify-center mb-2">
-                  <CheckCircle2 className="w-5 h-5 text-slate-400" />
-                </div>
-                <p className="text-xs font-medium text-slate-600">No hay alertas preventivas nuevas</p>
-                <p className="text-[11px] text-slate-400 mt-0.5">El sistema está al día con las tareas y vencimientos</p>
-              </div>
-            </div>
-          )}
-        </div>
+        {/* Centro de Notificaciones en Tiempo Real (SignalR) */}
+        <NotificationCenter />
       </div>
     </header>
   );

@@ -16,19 +16,22 @@ public class PlanillaService : IPlanillaService
     private readonly IJornadaExtraordinariaRepository _jornadaRepository;
     private readonly IAuditoriaRepository _auditoriaRepository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IGeneradorColillaPdfService? _generadorColillaPdfService;
 
     public PlanillaService(
         IEmpleadoRepository empleadoRepository,
         IContratoRepository contratoRepository,
         IJornadaExtraordinariaRepository jornadaRepository,
         IAuditoriaRepository auditoriaRepository,
-        IUnitOfWork unitOfWork)
+        IUnitOfWork unitOfWork,
+        IGeneradorColillaPdfService? generadorColillaPdfService = null)
     {
         _empleadoRepository = empleadoRepository;
         _contratoRepository = contratoRepository;
         _jornadaRepository = jornadaRepository;
         _auditoriaRepository = auditoriaRepository;
         _unitOfWork = unitOfWork;
+        _generadorColillaPdfService = generadorColillaPdfService;
     }
 
     public DeduccionesDto SimularDeducciones(decimal salarioBruto)
@@ -114,5 +117,32 @@ public class PlanillaService : IPlanillaService
 
         var registros = await _jornadaRepository.ObtenerPorEmpleadoIdAsync(empleadoId, mes, anio, ct);
         return registros.Select(j => JornadaExtraordinariaDto.FromEntity(j, empleado)).ToList();
+    }
+
+    public async Task<byte[]> GenerarColillaPdfEmpleadoAsync(int empleadoId, CancellationToken ct = default)
+    {
+        if (_generadorColillaPdfService == null)
+        {
+            throw new InvalidOperationException("El servicio de generación de PDF no está configurado.");
+        }
+
+        var empleado = await _empleadoRepository.ObtenerPorIdAsync(empleadoId, ct)
+            ?? throw new ReglaNegocioException($"No se encontró el colaborador con ID {empleadoId}.");
+
+        // Determinar salario mensual vigente
+        decimal salarioMensual = empleado.SalarioBase;
+        var contratos = await _contratoRepository.ObtenerPorEmpleadoIdAsync(empleadoId, ct);
+        var contratoVigente = contratos
+            .Where(c => c.Estado == EstadoContrato.Vigente)
+            .OrderByDescending(c => c.Periodo.FechaInicio)
+            .FirstOrDefault();
+
+        if (contratoVigente != null && contratoVigente.Salario.Monto > 0)
+        {
+            salarioMensual = contratoVigente.Salario.Monto;
+        }
+
+        var deducciones = SimularDeducciones(salarioMensual);
+        return _generadorColillaPdfService.GenerarColillaPdf(empleado, deducciones, DateTime.Now);
     }
 }

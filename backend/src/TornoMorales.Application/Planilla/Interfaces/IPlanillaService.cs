@@ -3,8 +3,8 @@ using TornoMorales.Application.Planilla.DTOs;
 namespace TornoMorales.Application.Planilla.Interfaces;
 
 /// <summary>
-/// Caso de uso para la administración y simulación de nómina, deducciones de ley (INSS/IR)
-/// y liquidación de horas extraordinarias conforme al Código del Trabajo de Nicaragua.
+/// Caso de uso para la administración y simulación de nómina, deducciones de ley (INSS/IR),
+/// liquidación de horas extraordinarias y generación de comprobantes de pago (PDF) conforme al Código del Trabajo de Nicaragua.
 /// </summary>
 public interface IPlanillaService
 {
@@ -29,5 +29,13 @@ public interface IPlanillaService
         int empleadoId,
         int? mes = null,
         int? anio = null,
+        CancellationToken ct = default);
+
+    /// <summary>
+    /// Genera la colilla de pago oficial en formato PDF para el colaborador indicado con base en su salario vigente
+    /// y sus deducciones de ley (INSS e IR).
+    /// </summary>
+    Task<byte[]> GenerarColillaPdfEmpleadoAsync(
+        int empleadoId,
         CancellationToken ct = default);
 }

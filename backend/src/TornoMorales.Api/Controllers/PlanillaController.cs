@@ -6,8 +6,8 @@ using TornoMorales.Application.Planilla.Interfaces;
 namespace TornoMorales.Api.Controllers;
 
 /// <summary>
-/// Controlador para la gestión y simulación de nómina, cálculo de deducciones de ley (INSS e IR)
-/// y registro de jornadas extraordinarias con recargo legal (Ley No. 185 Nicaragua).
+/// Controlador para la gestión y simulación de nómina, cálculo de deducciones de ley (INSS e IR),
+/// emisión de colillas de pago en formato PDF y registro de jornadas extraordinarias con recargo legal (Ley No. 185 Nicaragua).
 /// </summary>
 [ApiController]
 [Route("api/[controller]")]
@@ -77,5 +77,23 @@ public class PlanillaController : ControllerBase
     {
         var jornadas = await _planillaService.ObtenerJornadasPorEmpleadoAsync(empleadoId, mes, anio, ct);
         return Ok(jornadas);
+    }
+
+    /// <summary>
+    /// Emite y descarga la colilla de pago oficial del colaborador en formato PDF binario,
+    /// detallando los ingresos, retenciones fiscales (INSS e IR) y monto neto a cobrar.
+    /// </summary>
+    /// <param name="empleadoId">Identificador del colaborador.</param>
+    /// <param name="ct">Token de cancelación.</param>
+    /// <returns>Documento PDF binario de la colilla de pago.</returns>
+    [HttpGet("empleados/{empleadoId:int}/colilla-pdf")]
+    [Authorize(Roles = "Administrador,RRHH,Supervisor")]
+    [Produces("application/pdf")]
+    [ProducesResponseType(typeof(FileContentResult), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DescargarColillaPdf(int empleadoId, CancellationToken ct = default)
+    {
+        var pdfBytes = await _planillaService.GenerarColillaPdfEmpleadoAsync(empleadoId, ct);
+        return File(pdfBytes, "application/pdf", $"Colilla_Pago_Empleado_{empleadoId}.pdf");
     }
 }

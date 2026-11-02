@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using TornoMorales.Application.Planilla.Interfaces;
 using TornoMorales.Application.Services;
 using TornoMorales.Domain.Ports;
 using TornoMorales.Infrastructure.Persistence;
@@ -38,8 +39,11 @@ public static class DependencyInjection
         services.AddScoped<IJornadaExtraordinariaRepository, JornadaExtraordinariaRepository>();
         services.AddScoped<IUnitOfWork, UnitOfWork>();
 
-        // ── Adaptador de Notificaciones / Alertas de Seguridad (Resend API) ──
+        // ── Adaptador de Notificaciones / Alertas de Seguridad (Resend API + SMTP Dual) ──
         services.AddHttpClient<IEmailNotificationService, ResendEmailNotificationService>();
+
+        // ── Motor de Generación de Colillas de Pago PDF (QuestPDF) ──
+        services.AddSingleton<IGeneradorColillaPdfService, GeneradorColillaPdfService>();
 
         return services;
     }
