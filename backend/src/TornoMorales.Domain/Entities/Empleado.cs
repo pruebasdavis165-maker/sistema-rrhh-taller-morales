@@ -1,5 +1,6 @@
 using TornoMorales.Domain.Common;
 using TornoMorales.Domain.Exceptions;
+using TornoMorales.Domain.ValueObjects;
 
 namespace TornoMorales.Domain.Entities;
 
@@ -18,6 +19,7 @@ public class Empleado : Entity<int>, IAggregateRoot
     public DateTime FechaIngreso { get; private set; }
 
     public virtual ExpedienteLaboral? ExpedienteLaboral { get; private set; }
+    public MatrizEspecialidad Especialidades { get; private set; } = MatrizEspecialidad.PorDefecto();
 
     public string NombreCompleto => $"{Nombres} {Apellidos}";
 
@@ -49,6 +51,26 @@ public class Empleado : Entity<int>, IAggregateRoot
         DepartamentoId = departamentoId;
         Activo = true;
         FechaIngreso = DateTime.UtcNow;
+        Especialidades = MatrizEspecialidad.PorDefecto();
+    }
+
+    public Empleado(
+        string nombres,
+        string apellidos,
+        string cedula,
+        string telefono,
+        string correo,
+        string direccion,
+        string cargo,
+        decimal salarioBase,
+        int departamentoId,
+        MatrizEspecialidad? especialidades)
+        : this(nombres, apellidos, cedula, telefono, correo, direccion, cargo, salarioBase, departamentoId)
+    {
+        if (especialidades != null)
+        {
+            Especialidades = especialidades;
+        }
     }
 
     public void DarDeBaja()
@@ -69,5 +91,10 @@ public class Empleado : Entity<int>, IAggregateRoot
         Cargo = cargo.Trim();
         SalarioBase = salarioBase > 0 ? salarioBase : throw new ReglaNegocioException("El salario base debe ser mayor a cero.");
         DepartamentoId = departamentoId;
+    }
+
+    public void ActualizarEspecialidades(MatrizEspecialidad especialidades)
+    {
+        Especialidades = especialidades ?? throw new ReglaNegocioException("La matriz de especialidades es requerida.");
     }
 }

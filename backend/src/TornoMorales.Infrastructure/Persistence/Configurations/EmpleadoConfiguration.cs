@@ -50,5 +50,29 @@ public class EmpleadoConfiguration : IEntityTypeConfiguration<Empleado>
 
         builder.Property(e => e.FechaIngreso)
             .IsRequired();
+
+        // Issue 4.4: Matrices de Especialidad (Value Object calificado 1 al 5)
+        builder.OwnsOne(e => e.Especialidades, esp =>
+        {
+            esp.Property(m => m.TornoConvencional)
+                .HasColumnName("EspecialidadTornoConvencional")
+                .HasDefaultValue(1)
+                .IsRequired();
+
+            esp.Property(m => m.CNC)
+                .HasColumnName("EspecialidadCNC")
+                .HasDefaultValue(1)
+                .IsRequired();
+
+            esp.Property(m => m.Fresadora)
+                .HasColumnName("EspecialidadFresadora")
+                .HasDefaultValue(1)
+                .IsRequired();
+
+            esp.Property(m => m.Soldadura)
+                .HasColumnName("EspecialidadSoldadura")
+                .HasDefaultValue(1)
+                .IsRequired();
+        });
     }
 }

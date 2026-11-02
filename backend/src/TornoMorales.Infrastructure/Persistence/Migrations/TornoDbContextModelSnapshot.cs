@@ -67,6 +67,59 @@ namespace TornoMorales.Infrastructure.Persistence.Migrations
                     b.ToTable("Auditorias", (string)null);
                 });
 
+            modelBuilder.Entity("TornoMorales.Domain.Entities.Candidato", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasColumnName("IdCandidato");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Apellidos")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Correo")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)");
+
+                    b.Property<string>("Direccion")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<string>("Estado")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("Nombres")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<int>("ReclutamientoId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Resultado")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("Telefono")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ReclutamientoId");
+
+                    b.ToTable("Candidatos", (string)null);
+                });
+
             modelBuilder.Entity("TornoMorales.Domain.Entities.Contrato", b =>
                 {
                     b.Property<int>("Id")
@@ -347,6 +400,41 @@ namespace TornoMorales.Infrastructure.Persistence.Migrations
                     b.ToTable("Liquidaciones", (string)null);
                 });
 
+            modelBuilder.Entity("TornoMorales.Domain.Entities.Reclutamiento", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasColumnName("IdReclutamiento");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("CargoSolicitado")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)");
+
+                    b.Property<string>("Descripcion")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<string>("Estado")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<DateTime?>("FechaCierre")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("FechaInicio")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Reclutamientos", (string)null);
+                });
+
             modelBuilder.Entity("TornoMorales.Domain.Entities.SolicitudVacaciones", b =>
                 {
                     b.Property<int>("Id")
@@ -466,6 +554,17 @@ namespace TornoMorales.Infrastructure.Persistence.Migrations
                     b.ToTable("Usuarios", (string)null);
                 });
 
+            modelBuilder.Entity("TornoMorales.Domain.Entities.Candidato", b =>
+                {
+                    b.HasOne("TornoMorales.Domain.Entities.Reclutamiento", "Reclutamiento")
+                        .WithMany("Candidatos")
+                        .HasForeignKey("ReclutamientoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Reclutamiento");
+                });
+
             modelBuilder.Entity("TornoMorales.Domain.Entities.Contrato", b =>
                 {
                     b.HasOne("TornoMorales.Domain.Entities.Empleado", "Empleado")
@@ -532,6 +631,49 @@ namespace TornoMorales.Infrastructure.Persistence.Migrations
                         .IsRequired();
 
                     b.Navigation("Salario")
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("TornoMorales.Domain.Entities.Empleado", b =>
+                {
+                    b.OwnsOne("TornoMorales.Domain.ValueObjects.MatrizEspecialidad", "Especialidades", b1 =>
+                        {
+                            b1.Property<int>("EmpleadoId")
+                                .HasColumnType("integer");
+
+                            b1.Property<int>("CNC")
+                                .ValueGeneratedOnAdd()
+                                .HasColumnType("integer")
+                                .HasDefaultValue(1)
+                                .HasColumnName("EspecialidadCNC");
+
+                            b1.Property<int>("Fresadora")
+                                .ValueGeneratedOnAdd()
+                                .HasColumnType("integer")
+                                .HasDefaultValue(1)
+                                .HasColumnName("EspecialidadFresadora");
+
+                            b1.Property<int>("Soldadura")
+                                .ValueGeneratedOnAdd()
+                                .HasColumnType("integer")
+                                .HasDefaultValue(1)
+                                .HasColumnName("EspecialidadSoldadura");
+
+                            b1.Property<int>("TornoConvencional")
+                                .ValueGeneratedOnAdd()
+                                .HasColumnType("integer")
+                                .HasDefaultValue(1)
+                                .HasColumnName("EspecialidadTornoConvencional");
+
+                            b1.HasKey("EmpleadoId");
+
+                            b1.ToTable("Empleados");
+
+                            b1.WithOwner()
+                                .HasForeignKey("EmpleadoId");
+                        });
+
+                    b.Navigation("Especialidades")
                         .IsRequired();
                 });
 
@@ -619,6 +761,11 @@ namespace TornoMorales.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("TornoMorales.Domain.Entities.ExpedienteLaboral", b =>
                 {
                     b.Navigation("Contratos");
+                });
+
+            modelBuilder.Entity("TornoMorales.Domain.Entities.Reclutamiento", b =>
+                {
+                    b.Navigation("Candidatos");
                 });
 #pragma warning restore 612, 618
         }

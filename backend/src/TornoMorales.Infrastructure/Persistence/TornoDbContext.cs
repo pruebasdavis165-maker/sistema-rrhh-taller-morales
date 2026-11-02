@@ -17,6 +17,8 @@ public class TornoDbContext : DbContext
     public DbSet<Usuario> Usuarios => Set<Usuario>();
     public DbSet<Liquidacion> Liquidaciones => Set<Liquidacion>();
     public DbSet<JornadaExtraordinaria> JornadasExtraordinarias => Set<JornadaExtraordinaria>();
+    public DbSet<Reclutamiento> Reclutamientos => Set<Reclutamiento>();
+    public DbSet<Candidato> Candidatos => Set<Candidato>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
