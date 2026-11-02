@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import Header from '@/components/Header';
 import { useAuth } from '@/context/AuthContext';
 import { empleadosApi, planillaApi } from '@/lib/api';
@@ -16,10 +16,11 @@ import {
   HelpCircle,
   TrendingDown,
   UserCheck,
-  Search
+  Search,
+  AlertCircle
 } from 'lucide-react';
 
-export default function PlanillaPage() {
+function PlanillaContent() {
   const { user } = useAuth();
   const isSupervisor = user?.rol === 'Supervisor';
 
@@ -27,6 +28,7 @@ export default function PlanillaPage() {
   const [loading, setLoading] = useState(true);
   const [descargandoId, setDescargandoId] = useState<number | null>(null);
   const [busqueda, setBusqueda] = useState('');
+  const [errorCarga, setErrorCarga] = useState<string | null>(null);
 
   // Estados de la Calculadora de Simulación
   const [salarioSimular, setSalarioSimular] = useState<number>(20000);
@@ -34,13 +36,29 @@ export default function PlanillaPage() {
   const [simulando, setSimulando] = useState(false);
 
   useEffect(() => {
-    empleadosApi.listar().then((data) => {
-      setEmpleados(data || []);
-      setLoading(false);
-    });
+    let isMounted = true;
+
+    empleadosApi.listar()
+      .then((data) => {
+        if (isMounted) {
+          setEmpleados(data || []);
+          setLoading(false);
+        }
+      })
+      .catch((err) => {
+        if (isMounted) {
+          console.error('Error al obtener lista de empleados:', err);
+          setErrorCarga('No se pudo cargar la nómina de colaboradores. Verifique la conexión con el servidor.');
+          setLoading(false);
+        }
+      });
 
     // Simulación inicial por defecto
     handleSimularDeducciones(20000);
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const handleSimularDeducciones = async (monto: number) => {
@@ -83,7 +101,6 @@ export default function PlanillaPage() {
 
   // Cálculos consolidados de nómina
   const totalPlanilla = empleados.reduce((acc, curr) => acc + (curr.salarioMensual ?? curr.salarioBase ?? 0), 0);
-  const inssPatronalEstimado = totalPlanilla * 0.225; // 22.5% más de 50 trabajadores o 21.5%
   const inssLaboralEstimado = totalPlanilla * 0.07; // 7%
 
   return (
@@ -94,6 +111,13 @@ export default function PlanillaPage() {
       />
 
       <main className="p-8 max-w-7xl w-full mx-auto space-y-8">
+        {errorCarga && (
+          <div className="p-4 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl flex items-center gap-3 text-xs">
+            <AlertCircle className="w-5 h-5 text-amber-600 shrink-0" />
+            <span>{errorCarga}</span>
+          </div>
+        )}
+
         {/* KPI Cards de Nómina */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-md space-y-2">
@@ -130,7 +154,7 @@ export default function PlanillaPage() {
               </div>
             </div>
             <p className="text-xl font-bold text-slate-900">{empleados.length} Técnicos</p>
-            <p className="text-[11px] text-emerald-600 font-medium">100% Expedientes activos</p>
+            <p className="text-[11px] text-emerald-600 font-medium">Expedientes activos de taller</p>
           </div>
 
           <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-md space-y-2">
@@ -328,5 +352,26 @@ export default function PlanillaPage() {
         </div>
       </main>
     </div>
+  );
+}
+
+export default function PlanillaPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex-1 flex flex-col bg-slate-50 min-h-screen">
+          <Header
+            title="Gestión de Nómina y Planilla (Ley No. 185)"
+            subtitle="Deducciones laborales de ley (INSS e IR), desglose financiero y exportación de colillas de pago con QuestPDF"
+          />
+          <div className="p-12 flex flex-col items-center justify-center text-slate-400 gap-3">
+            <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+            <p className="text-xs">Cargando nómina de colaboradores...</p>
+          </div>
+        </div>
+      }
+    >
+      <PlanillaContent />
+    </Suspense>
   );
 }

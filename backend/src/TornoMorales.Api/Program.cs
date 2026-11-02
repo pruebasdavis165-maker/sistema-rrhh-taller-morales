@@ -136,17 +136,21 @@ builder.Services.AddAuthentication(options =>
         ClockSkew = TimeSpan.Zero
     };
 
-    // Extraer JWT de la cookie HTTP-only o query parameter para WebSockets/SignalR
+    // Soporte para leer token JWT desde Cookies HTTP-Only ("tm_auth_token" o "access_token")
     options.Events = new JwtBearerEvents
     {
         OnMessageReceived = context =>
         {
-            if (context.Request.Cookies.TryGetValue("tm_auth_token", out var tokenCookie) && !string.IsNullOrEmpty(tokenCookie))
+            if (context.Request.Cookies.TryGetValue("tm_auth_token", out var tmCookie) && !string.IsNullOrEmpty(tmCookie))
             {
-                context.Token = tokenCookie;
+                context.Token = tmCookie;
+            }
+            else if (context.Request.Cookies.TryGetValue("access_token", out var accessCookie) && !string.IsNullOrEmpty(accessCookie))
+            {
+                context.Token = accessCookie;
             }
 
-            // Soporte para autenticación en WebSockets de SignalR
+            // Soporte para autenticación en WebSocket/SignalR
             var accessToken = context.Request.Query["access_token"];
             var path = context.HttpContext.Request.Path;
             if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs"))
@@ -186,15 +190,13 @@ using (var scope = app.Services.CreateScope())
 // Middleware de manejo global de errores
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 
-if (app.Environment.IsDevelopment())
+// ── Swagger UI Activado Globalmente en Todos los Entornos (Docker y Local) ── Issue 5.3
+app.UseSwagger();
+app.UseSwaggerUI(c =>
 {
-    app.UseSwagger();
-    app.UseSwaggerUI(c =>
-    {
-        c.SwaggerEndpoint("/swagger/v1/swagger.json", "Torno Morales RRHH API v1");
-        c.RoutePrefix = string.Empty;
-    });
-}
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "Torno Morales RRHH API v1");
+    c.RoutePrefix = "swagger";
+});
 
 app.UseCors("AllowFrontend");
 app.UseRateLimiter();
