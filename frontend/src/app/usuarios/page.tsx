@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import Header from '@/components/Header';
 import Link from 'next/link';
 import { 
@@ -25,6 +26,13 @@ import Modal from '@/components/Modal';
 
 export default function UsuariosPage() {
   const { user: currentUser } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (currentUser?.rol === 'Empleado') {
+      router.replace(currentUser.empleadoId ? `/empleados/${currentUser.empleadoId}` : '/empleados');
+    }
+  }, [currentUser, router]);
   const [usuarios, setUsuarios] = useState<UsuarioDto[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -177,7 +185,7 @@ export default function UsuariosPage() {
     }
   };
 
-  if (currentUser?.rol === 'Supervisor') {
+  if (currentUser?.rol === 'Supervisor' || currentUser?.rol === 'Empleado') {
     return (
       <div className="flex-1 flex flex-col bg-slate-50 min-h-screen">
         <Header
@@ -584,3 +592,4 @@ export default function UsuariosPage() {
     </div>
   );
 }
+

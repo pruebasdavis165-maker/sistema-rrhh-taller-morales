@@ -11,7 +11,8 @@ public record UsuarioDto(
     DateTime? UltimoAcceso,
     bool TotpHabilitado = false,
     DateTime? FechaUltimoCambioPassword = null,
-    bool RequiereRotacion = false
+    bool RequiereRotacion = false,
+    int? EmpleadoId = null
 );
 
 public record LoginRequest(
@@ -25,7 +26,8 @@ public record LoginResponse(
     string NombreCompleto,
     string Correo,
     string Rol,
-    DateTime Expiracion
+    DateTime Expiracion,
+    int? EmpleadoId = null
 );
 
 // Resultado del login: puede requerir verificación TOTP antes de emitir la cookie
@@ -42,7 +44,8 @@ public record SesionUsuarioDto(
     string Correo,
     string Rol,
     DateTime ExpiracionToken,
-    bool TotpHabilitado = false
+    bool TotpHabilitado = false,
+    int? EmpleadoId = null
 );
 
 public record CrearUsuarioRequest(
@@ -61,15 +64,18 @@ public record ActualizarUsuarioRequest(
     string? NuevoPassword = null
 );
 
-// ── 2FA / TOTP ──────────────────────────────────────────────────────────────
+public record CambiarPasswordExpiradaRequest(
+    string NombreUsuario,
+    string PasswordActual,
+    string PasswordNueva,
+    string ConfirmarPasswordNueva
+);
 
-/// <summary>Solicitud de verificación del código TOTP durante el login.</summary>
 public record VerificarTotpRequest(
     int UsuarioId,
     string Codigo
 );
 
-/// <summary>Respuesta al configurar/registrar TOTP: secreto base32 + URI para QR.</summary>
 public record ConfigurarTotpResponse(
     string SecretoBase32,
     string ProvisioningUri

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import Header from '@/components/Header';
 import { useAuth } from '@/context/AuthContext';
 import { dashboardApi, auditoriaApi } from '@/lib/api';
@@ -46,6 +47,13 @@ const SPECIALTY_COLORS = ['#1A56DB', '#10B981', '#F59E0B', '#D946EF', '#0284C7',
 export default function DashboardPage() {
   const { user } = useAuth();
   const isSupervisor = user?.rol === 'Supervisor';
+  const router = useRouter();
+
+  useEffect(() => {
+    if (user?.rol === 'Empleado') {
+      router.replace(user.empleadoId ? `/empleados/${user.empleadoId}` : '/empleados');
+    }
+  }, [user, router]);
   const [analitica, setAnalitica] = useState<DashboardAnaliticaDto | null>(null);
   const [actividades, setActividades] = useState<AuditoriaDto[]>([]);
   const [loading, setLoading] = useState(true);
@@ -681,3 +689,4 @@ export default function DashboardPage() {
     </div>
   );
 }
+

@@ -26,7 +26,7 @@ import {
 } from 'lucide-react';
 
 function VacacionesContent() {
-  const { hasRole } = useAuth();
+  const { user, hasRole } = useAuth();
   const searchParams = useSearchParams();
   const [solicitudes, setSolicitudes] = useState<SolicitudVacacionesDto[]>([]);
   const [empleados, setEmpleados] = useState<EmpleadoDto[]>([]);
@@ -43,6 +43,14 @@ function VacacionesContent() {
   const [searchTerm, setSearchTerm] = useState(searchParams?.get('q') || '');
 
   // Sincronizar parámetros de búsqueda (?q= y ?empleadoId=)
+  useEffect(() => {
+    if (user?.rol === 'Empleado' && user.empleadoId) {
+      setSelectedSaldoEmpleadoId(user.empleadoId);
+      setSelectedEmpleadoId(user.empleadoId);
+      cargarSaldo(user.empleadoId);
+    }
+  }, [user]);
+
   useEffect(() => {
     const q = searchParams?.get('q');
     if (q !== null && q !== undefined) {
@@ -570,3 +578,4 @@ export default function VacacionesPage() {
     </Suspense>
   );
 }
+

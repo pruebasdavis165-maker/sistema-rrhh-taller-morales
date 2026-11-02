@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import Header from '@/components/Header';
 import { useAuth } from '@/context/AuthContext';
 import { auditoriaApi } from '@/lib/api';
@@ -12,6 +12,13 @@ import { ShieldCheck, Calendar, User, Loader2, RefreshCw, Ban, Search } from 'lu
 function AuditoriaContent() {
   const { user } = useAuth();
   const searchParams = useSearchParams();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (user?.rol === 'Empleado') {
+      router.replace(user.empleadoId ? `/empleados/${user.empleadoId}` : '/empleados');
+    }
+  }, [user, router]);
   const [auditorias, setAuditorias] = useState<AuditoriaDto[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -30,7 +37,7 @@ function AuditoriaContent() {
   };
 
   useEffect(() => {
-    if (user?.rol !== 'Supervisor') {
+    if (user?.rol !== 'Supervisor' && user?.rol !== 'Empleado') {
       cargarAuditoria();
     }
   }, [user?.rol]);
@@ -205,3 +212,4 @@ export default function AuditoriaPage() {
     </Suspense>
   );
 }
+

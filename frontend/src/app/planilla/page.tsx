@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, Suspense } from 'react';
+import { useRouter } from 'next/navigation';
 import Header from '@/components/Header';
 import { useAuth } from '@/context/AuthContext';
 import { empleadosApi, planillaApi } from '@/lib/api';
@@ -23,6 +24,13 @@ import {
 function PlanillaContent() {
   const { user } = useAuth();
   const isSupervisor = user?.rol === 'Supervisor';
+  const router = useRouter();
+
+  useEffect(() => {
+    if (user?.rol === 'Empleado') {
+      router.replace(user.empleadoId ? `/empleados/${user.empleadoId}` : '/empleados');
+    }
+  }, [user, router]);
 
   const [empleados, setEmpleados] = useState<EmpleadoDto[]>([]);
   const [loading, setLoading] = useState(true);
@@ -375,3 +383,4 @@ export default function PlanillaPage() {
     </Suspense>
   );
 }
+

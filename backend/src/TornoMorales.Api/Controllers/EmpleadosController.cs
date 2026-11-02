@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using TornoMorales.Api.Security;
 using TornoMorales.Application.Common.Security;
 using TornoMorales.Application.DTOs;
 using TornoMorales.Domain.Entities;
@@ -9,9 +10,10 @@ namespace TornoMorales.Api.Controllers;
 
 /// <summary>
 /// Controlador para la gestión y consulta de expedientes de empleados.
-/// Aplica políticas de enmascaramiento de datos financieros y de identificación (Issue 2.2).
+/// Aplica políticas de enmascaramiento de datos financieros y de identificación (Issue 2.2),
+/// y validación de propiedad de recursos para el rol Empleado (Issue 5.4).
 /// </summary>
-[Authorize]
+[Authorize(Roles = "Administrador,RRHH,Supervisor,Empleado")]
 [ApiController]
 [Route("api/[controller]")]
 [Produces("application/json")]
@@ -32,8 +34,9 @@ public class EmpleadosController : ControllerBase
     }
 
     /// <summary>
-    /// Lista el directorio completo de empleados. Si el rol es Supervisor,
-    /// el salario base/mensual se retorna nulo y la cédula se enmascara (***-******-****X).
+    /// Lista el directorio de empleados.
+    /// Si el rol es Supervisor, el salario base/mensual se retorna nulo y la cédula se enmascara.
+    /// Si el rol es Empleado, se retorna únicamente su propio expediente laboral (Issue 5.4).
     /// </summary>
     [HttpGet]
     [ProducesResponseType(typeof(IReadOnlyList<EmpleadoDto>), StatusCodes.Status200OK)]
@@ -41,6 +44,17 @@ public class EmpleadosController : ControllerBase
     {
         var empleados = await _empleadoRepository.ListarAsync(ct);
         bool esSupervisor = User.IsInRole("Supervisor");
+        bool esEmpleado = User.IsInRole("Empleado");
+
+        if (esEmpleado)
+        {
+            var miId = await ResourceAuthorizationHelper.ObtenerEmpleadoIdVinculadoAsync(User, _empleadoRepository, ct);
+            if (!miId.HasValue)
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, new { mensaje = "No se encontró el expediente vinculado a su usuario." });
+            }
+            empleados = empleados.Where(e => e.Id == miId.Value).ToList();
+        }
 
         var result = empleados.Select(e => new EmpleadoDto(
             Id: e.Id,
@@ -64,13 +78,25 @@ public class EmpleadosController : ControllerBase
     }
 
     /// <summary>
-    /// Obtiene el detalle de un empleado por su ID con políticas de enmascaramiento por rol.
+    /// Obtiene el detalle de un empleado por su ID.
+    /// Si el rol es Empleado, valida estrictamente que el ID solicitado coincida con el vinculado a su cuenta (Issue 5.4).
     /// </summary>
     [HttpGet("{id:int}")]
     [ProducesResponseType(typeof(EmpleadoDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<EmpleadoDto>> ObtenerPorId(int id, CancellationToken ct = default)
     {
+        // ── Issue 5.4: Autorización Basada en Recursos para rol Empleado ─────────
+        if (User.IsInRole("Empleado"))
+        {
+            var miId = await ResourceAuthorizationHelper.ObtenerEmpleadoIdVinculadoAsync(User, _empleadoRepository, ct);
+            if (!miId.HasValue || miId.Value != id)
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, new { mensaje = "Acceso denegado: Solo tiene autorización para consultar su propio expediente laboral." });
+            }
+        }
+
         var e = await _empleadoRepository.ObtenerPorIdAsync(id, ct);
         if (e == null) return NotFound(new { mensaje = "Empleado no encontrado." });
 
@@ -99,6 +125,7 @@ public class EmpleadosController : ControllerBase
 
     /// <summary>
     /// Registra un nuevo colaborador y crea su expediente laboral.
+    /// Restringido a Administrador y RRHH.
     /// </summary>
     [HttpPost]
     [Authorize(Roles = "Administrador,RRHH")]

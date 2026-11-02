@@ -183,7 +183,7 @@ export interface PagedResult<T> {
 // Auth & Usuarios (Fase 3)
 // ──────────────────────────────────────────────────────────
 
-export type RolUsuario = 'Administrador' | 'RRHH' | 'Supervisor';
+export type RolUsuario = 'Administrador' | 'RRHH' | 'Supervisor' | 'Empleado';
 
 export interface LoginRequest {
   nombreUsuario: string;
@@ -197,6 +197,7 @@ export interface LoginResponse {
   correo: string;
   rol: RolUsuario;
   expiracion: string;
+  empleadoId?: number;
 }
 
 export interface UsuarioDto {
@@ -208,6 +209,7 @@ export interface UsuarioDto {
   activo: boolean;
   fechaCreacion: string;
   ultimoAcceso?: string;
+  empleadoId?: number;
 }
 
 export interface CrearUsuarioRequest {
@@ -234,6 +236,7 @@ export interface SesionUsuarioDto {
   rol: RolUsuario;
   expiracionToken: string;
   totpHabilitado?: boolean;
+  empleadoId?: number;
 }
 
 export interface LoginResultDto {
@@ -247,6 +250,7 @@ export interface LoginResultDto {
   correo?: string;
   rol?: RolUsuario;
   expiracionToken?: string;
+  empleadoId?: number;
 }
 
 export interface VerificarTotpRequest {
@@ -382,3 +386,4 @@ export interface CrearCandidatoRequest {
   correo: string;
   direccion?: string;
 }
+

@@ -1,25 +1,32 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using TornoMorales.Api.Security;
 using TornoMorales.Application.Planilla.DTOs;
 using TornoMorales.Application.Planilla.Interfaces;
+using TornoMorales.Domain.Ports;
 
 namespace TornoMorales.Api.Controllers;
 
 /// <summary>
 /// Controlador para la gestión y simulación de nómina, cálculo de deducciones de ley (INSS e IR),
 /// emisión de colillas de pago en formato PDF y registro de jornadas extraordinarias con recargo legal (Ley No. 185 Nicaragua).
+/// Aplica autorización basada en recursos para el rol Empleado (Issue 5.4).
 /// </summary>
 [ApiController]
 [Route("api/[controller]")]
 [Produces("application/json")]
-[Authorize(Roles = "Administrador,RRHH")]
+[Authorize(Roles = "Administrador,RRHH,Supervisor,Empleado")]
 public class PlanillaController : ControllerBase
 {
     private readonly IPlanillaService _planillaService;
+    private readonly IEmpleadoRepository _empleadoRepository;
 
-    public PlanillaController(IPlanillaService planillaService)
+    public PlanillaController(
+        IPlanillaService planillaService,
+        IEmpleadoRepository empleadoRepository)
     {
         _planillaService = planillaService;
+        _empleadoRepository = empleadoRepository;
     }
 
     /// <summary>
@@ -40,12 +47,9 @@ public class PlanillaController : ControllerBase
     /// <summary>
     /// Registra formalmente una jornada laboral extraordinaria para un colaborador, calculando automáticamente
     /// el valor de la hora ordinaria (según jornada Diurna, Nocturna o Mixta) y aplicando el recargo legal del 100% (pago doble).
-    /// Asienta de forma atómica la jornada y el evento en la bitácora de auditoría inmutable.
     /// </summary>
-    /// <param name="request">Datos de la jornada: colaborador, fecha, horas, modalidad y justificación técnica.</param>
-    /// <param name="ct">Token de cancelación.</param>
-    /// <returns>Detalle consolidado de la jornada extraordinaria y el monto total devengado.</returns>
     [HttpPost("jornadas-extraordinarias")]
+    [Authorize(Roles = "Administrador,RRHH,Supervisor")]
     [ProducesResponseType(typeof(JornadaExtraordinariaDto), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
@@ -60,14 +64,11 @@ public class PlanillaController : ControllerBase
 
     /// <summary>
     /// Obtiene el histórico de jornadas extraordinarias registradas de un colaborador con filtros opcionales de mes y año.
+    /// Si el rol es Empleado, valida la propiedad del recurso.
     /// </summary>
-    /// <param name="empleadoId">Identificador del colaborador.</param>
-    /// <param name="mes">Mes del registro (1-12, opcional).</param>
-    /// <param name="anio">Año del registro (ej. 2026, opcional).</param>
-    /// <param name="ct">Token de cancelación.</param>
-    /// <returns>Listado de jornadas extraordinarias del colaborador.</returns>
     [HttpGet("empleados/{empleadoId:int}/jornadas")]
     [ProducesResponseType(typeof(IReadOnlyList<JornadaExtraordinariaDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     public async Task<ActionResult<IReadOnlyList<JornadaExtraordinariaDto>>> ObtenerJornadasPorEmpleado(
         int empleadoId,
@@ -75,6 +76,15 @@ public class PlanillaController : ControllerBase
         [FromQuery] int? anio = null,
         CancellationToken ct = default)
     {
+        if (User.IsInRole("Empleado"))
+        {
+            var miId = await ResourceAuthorizationHelper.ObtenerEmpleadoIdVinculadoAsync(User, _empleadoRepository, ct);
+            if (!miId.HasValue || miId.Value != empleadoId)
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, new { mensaje = "Acceso denegado: Solo puede consultar sus propias jornadas extraordinarias." });
+            }
+        }
+
         var jornadas = await _planillaService.ObtenerJornadasPorEmpleadoAsync(empleadoId, mes, anio, ct);
         return Ok(jornadas);
     }
@@ -82,17 +92,25 @@ public class PlanillaController : ControllerBase
     /// <summary>
     /// Emite y descarga la colilla de pago oficial del colaborador en formato PDF binario,
     /// detallando los ingresos, retenciones fiscales (INSS e IR) y monto neto a cobrar.
+    /// Si el rol es Empleado, valida estrictamente que coincida con el ID vinculado a su cuenta (Issue 5.4).
     /// </summary>
-    /// <param name="empleadoId">Identificador del colaborador.</param>
-    /// <param name="ct">Token de cancelación.</param>
-    /// <returns>Documento PDF binario de la colilla de pago.</returns>
     [HttpGet("empleados/{empleadoId:int}/colilla-pdf")]
-    [Authorize(Roles = "Administrador,RRHH,Supervisor")]
     [Produces("application/pdf")]
     [ProducesResponseType(typeof(FileContentResult), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> DescargarColillaPdf(int empleadoId, CancellationToken ct = default)
     {
+        // ── Issue 5.4: Validación de Propiedad para rol Empleado ─────────────────
+        if (User.IsInRole("Empleado"))
+        {
+            var miId = await ResourceAuthorizationHelper.ObtenerEmpleadoIdVinculadoAsync(User, _empleadoRepository, ct);
+            if (!miId.HasValue || miId.Value != empleadoId)
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, new { mensaje = "Acceso denegado: Solo tiene autorización para descargar su propia colilla de pago." });
+            }
+        }
+
         var pdfBytes = await _planillaService.GenerarColillaPdfEmpleadoAsync(empleadoId, ct);
         return File(pdfBytes, "application/pdf", $"Colilla_Pago_Empleado_{empleadoId}.pdf");
     }

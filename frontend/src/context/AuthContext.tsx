@@ -11,6 +11,7 @@ interface AuthContextType {
     nombreCompleto: string;
     correo: string;
     rol: RolUsuario;
+    empleadoId?: number;
   } | null;
   isAuthenticated: boolean;
   isLoading: boolean;
@@ -41,6 +42,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           nombreCompleto: perfil.nombreCompleto,
           correo: perfil.correo,
           rol: perfil.rol,
+          empleadoId: perfil.empleadoId,
         };
         setUser(userData);
         localStorage.setItem(USER_SESSION_KEY, JSON.stringify(userData));
@@ -74,7 +76,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!user && !isLoginPage) {
       router.replace('/login');
     } else if (user && isLoginPage) {
-      router.replace('/');
+      if (user.rol === 'Empleado') {
+        router.replace(user.empleadoId ? `/empleados/${user.empleadoId}` : '/empleados');
+      } else {
+        router.replace('/');
+      }
+    } else if (user && user.rol === 'Empleado' && pathname === '/') {
+      router.replace(user.empleadoId ? `/empleados/${user.empleadoId}` : '/empleados');
     }
   }, [user, isLoading, pathname, router]);
 
@@ -90,11 +98,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       nombreCompleto: res.nombreCompleto!,
       correo: res.correo!,
       rol: res.rol!,
+      empleadoId: res.empleadoId,
     };
 
     setUser(userData);
     localStorage.setItem(USER_SESSION_KEY, JSON.stringify(userData));
-    router.push('/');
+    
+    if (userData.rol === 'Empleado') {
+      router.push(userData.empleadoId ? `/empleados/${userData.empleadoId}` : '/empleados');
+    } else {
+      router.push('/');
+    }
 
     return { requiereTotp: false };
   };
@@ -107,11 +121,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       nombreCompleto: sesion.nombreCompleto,
       correo: sesion.correo,
       rol: sesion.rol,
+      empleadoId: sesion.empleadoId,
     };
 
     setUser(userData);
     localStorage.setItem(USER_SESSION_KEY, JSON.stringify(userData));
-    router.push('/');
+    
+    if (userData.rol === 'Empleado') {
+      router.push(userData.empleadoId ? `/empleados/${userData.empleadoId}` : '/empleados');
+    } else {
+      router.push('/');
+    }
   };
 
   const logout = async () => {

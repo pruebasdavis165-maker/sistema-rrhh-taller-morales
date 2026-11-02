@@ -3,8 +3,10 @@ using System.Text;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
+using TornoMorales.Api.Security;
 using TornoMorales.Application.DTOs;
 using TornoMorales.Application.Services;
+using TornoMorales.Domain.Ports;
 
 namespace TornoMorales.Api.Controllers;
 
@@ -14,12 +16,17 @@ public class AuthController : ControllerBase
 {
     private readonly IAuthService _authService;
     private readonly ITotpService _totpService;
+    private readonly IEmpleadoRepository _empleadoRepository;
     private const string COOKIE_NAME = "tm_auth_token";
 
-    public AuthController(IAuthService authService, ITotpService totpService)
+    public AuthController(
+        IAuthService authService,
+        ITotpService totpService,
+        IEmpleadoRepository empleadoRepository)
     {
         _authService = authService;
         _totpService = totpService;
+        _empleadoRepository = empleadoRepository;
     }
 
     [HttpPost("login")]
@@ -48,13 +55,21 @@ public class AuthController : ControllerBase
         // Emitir Cookie HTTP-only, Secure y SameSite=Strict para mitigar riesgos XSS
         EstablecerAuthCookie(response.Token, response.Expiracion);
 
+        int? empleadoId = response.EmpleadoId;
+        if (!empleadoId.HasValue && !string.IsNullOrEmpty(response.Correo))
+        {
+            var empleados = await _empleadoRepository.ListarAsync(cancellationToken);
+            empleadoId = empleados.FirstOrDefault(e => e.Correo.Equals(response.Correo, StringComparison.OrdinalIgnoreCase))?.Id;
+        }
+
         var usuarioSesion = new SesionUsuarioDto(
             Id: 0,
             NombreUsuario: response.NombreUsuario,
             NombreCompleto: response.NombreCompleto,
             Correo: response.Correo,
             Rol: response.Rol,
-            ExpiracionToken: response.Expiracion
+            ExpiracionToken: response.Expiracion,
+            EmpleadoId: empleadoId
         );
 
         return Ok(usuarioSesion);
@@ -68,6 +83,13 @@ public class AuthController : ControllerBase
         var response = await _authService.VerificarTotpYCompletarLoginAsync(request, cancellationToken);
         EstablecerAuthCookie(response.Token, response.Expiracion);
 
+        int? empleadoId = response.EmpleadoId;
+        if (!empleadoId.HasValue && !string.IsNullOrEmpty(response.Correo))
+        {
+            var empleados = await _empleadoRepository.ListarAsync(cancellationToken);
+            empleadoId = empleados.FirstOrDefault(e => e.Correo.Equals(response.Correo, StringComparison.OrdinalIgnoreCase))?.Id;
+        }
+
         var usuarioSesion = new SesionUsuarioDto(
             Id: request.UsuarioId,
             NombreUsuario: response.NombreUsuario,
@@ -75,7 +97,8 @@ public class AuthController : ControllerBase
             Correo: response.Correo,
             Rol: response.Rol,
             ExpiracionToken: response.Expiracion,
-            TotpHabilitado: true
+            TotpHabilitado: true,
+            EmpleadoId: empleadoId
         );
 
         return Ok(usuarioSesion);
@@ -143,13 +166,21 @@ public class AuthController : ControllerBase
         var response = await _authService.RenovarSesionAsync(userId, cancellationToken);
         EstablecerAuthCookie(response.Token, response.Expiracion);
 
+        int? empleadoId = response.EmpleadoId;
+        if (!empleadoId.HasValue && !string.IsNullOrEmpty(response.Correo))
+        {
+            var empleados = await _empleadoRepository.ListarAsync(cancellationToken);
+            empleadoId = empleados.FirstOrDefault(e => e.Correo.Equals(response.Correo, StringComparison.OrdinalIgnoreCase))?.Id;
+        }
+
         var usuarioSesion = new SesionUsuarioDto(
             Id: userId,
             NombreUsuario: response.NombreUsuario,
             NombreCompleto: response.NombreCompleto,
             Correo: response.Correo,
             Rol: response.Rol,
-            ExpiracionToken: response.Expiracion
+            ExpiracionToken: response.Expiracion,
+            EmpleadoId: empleadoId
         );
 
         return Ok(usuarioSesion);
@@ -164,7 +195,9 @@ public class AuthController : ControllerBase
             return Unauthorized();
 
         var usuario = await _authService.ObtenerUsuarioPorIdAsync(userId, cancellationToken);
-        return Ok(usuario);
+        var empleadoId = await ResourceAuthorizationHelper.ObtenerEmpleadoIdVinculadoAsync(User, _empleadoRepository, cancellationToken);
+        var usuarioDto = usuario with { EmpleadoId = empleadoId };
+        return Ok(usuarioDto);
     }
 
     private void EstablecerAuthCookie(string token, DateTime expiracion)

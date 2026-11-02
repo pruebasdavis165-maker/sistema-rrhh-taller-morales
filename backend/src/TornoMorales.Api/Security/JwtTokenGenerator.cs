@@ -17,7 +17,7 @@ public class JwtTokenGenerator : IJwtTokenGenerator
         _configuration = configuration;
     }
 
-    public (string Token, DateTime Expiracion) GenerarToken(Usuario usuario)
+    public (string Token, DateTime Expiracion) GenerarToken(Usuario usuario, int? empleadoId = null)
     {
         // Clave secreta robusta: Se prioriza la variable de entorno Jwt__SecretKey o Jwt:SecretKey
         var secretKey = Environment.GetEnvironmentVariable("Jwt__SecretKey")
@@ -43,6 +43,11 @@ public class JwtTokenGenerator : IJwtTokenGenerator
             new("userId", usuario.Id.ToString()),
             new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
         };
+
+        if (empleadoId.HasValue)
+        {
+            claims.Add(new Claim("empleadoId", empleadoId.Value.ToString()));
+        }
 
         var tokenDescriptor = new SecurityTokenDescriptor
         {

@@ -25,7 +25,8 @@ import {
 } from 'lucide-react';
 
 function ContratosContent() {
-  const { user } = useAuth();
+  const { user, hasRole } = useAuth();
+  const canManage = hasRole(['Administrador', 'RRHH']);
   const searchParams = useSearchParams();
   const [contratos, setContratos] = useState<ContratoDto[]>([]);
   const [empleados, setEmpleados] = useState<EmpleadoDto[]>([]);
@@ -45,6 +46,12 @@ function ContratosContent() {
   const [contratoAFinalizar, setContratoAFinalizar] = useState<ContratoDto | null>(null);
 
   // Sincronizar parámetro de búsqueda global ?q=
+  useEffect(() => {
+    if (user?.rol === 'Empleado' && user.empleadoId) {
+      setSelectedEmpleadoId(user.empleadoId);
+    }
+  }, [user]);
+
   useEffect(() => {
     const q = searchParams?.get('q');
     if (q !== null && q !== undefined) {
@@ -285,6 +292,7 @@ function ContratosContent() {
             )}
           </div>
 
+          {canManage && (
           <button
             onClick={() => setIsNuevoModalOpen(true)}
             className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-xl shadow-xs flex items-center justify-center gap-2 transition-all flex-shrink-0"
@@ -292,6 +300,7 @@ function ContratosContent() {
             <Plus className="w-4 h-4" />
             <span>Nuevo Contrato</span>
           </button>
+          )}
         </div>
 
         {/* Contracts Table */}
@@ -436,3 +445,4 @@ export default function ContratosPage() {
     </Suspense>
   );
 }
+

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import Header from '@/components/Header';
 import { useAuth } from '@/context/AuthContext';
 import { reclutamientoApi } from '@/lib/api';
@@ -27,6 +28,13 @@ import {
 export default function ReclutamientoPage() {
   const { user, hasRole } = useAuth();
   const canManage = hasRole(['Administrador', 'RRHH']);
+  const router = useRouter();
+
+  useEffect(() => {
+    if (user?.rol === 'Empleado') {
+      router.replace(user.empleadoId ? `/empleados/${user.empleadoId}` : '/empleados');
+    }
+  }, [user, router]);
 
   const [vacantes, setVacantes] = useState<ReclutamientoDto[]>([]);
   const [loading, setLoading] = useState(true);
@@ -515,3 +523,4 @@ export default function ReclutamientoPage() {
     </div>
   );
 }
+

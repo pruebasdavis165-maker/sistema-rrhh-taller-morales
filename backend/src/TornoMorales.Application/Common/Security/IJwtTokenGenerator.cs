@@ -4,5 +4,5 @@ namespace TornoMorales.Application.Common.Security;
 
 public interface IJwtTokenGenerator
 {
-    (string Token, DateTime Expiracion) GenerarToken(Usuario usuario);
+    (string Token, DateTime Expiracion) GenerarToken(Usuario usuario, int? empleadoId = null);
 }

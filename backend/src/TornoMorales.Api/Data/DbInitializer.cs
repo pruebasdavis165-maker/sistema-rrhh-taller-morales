@@ -46,7 +46,31 @@ public static class DbInitializer
                 rol: "Supervisor"
             );
 
-            await context.Usuarios.AddRangeAsync(adminUser, rrhhUser, supervisorUser);
+            var (empleadoHash, empleadoSalt) = PasswordHasher.HashPassword("Empleado123*");
+            var empleadoUser = new Usuario(
+                nombreUsuario: "roberto.gutierrez",
+                nombreCompleto: "Roberto Alonso Gutiérrez Pérez",
+                correo: "roberto.gutierrez@tornomorales.com",
+                passwordHash: empleadoHash,
+                passwordSalt: empleadoSalt,
+                rol: "Empleado"
+            );
+
+            await context.Usuarios.AddRangeAsync(adminUser, rrhhUser, supervisorUser, empleadoUser);
+            await context.SaveChangesAsync();
+        }
+        else if (!await context.Usuarios.AnyAsync(u => u.Rol == "Empleado"))
+        {
+            var (empleadoHash, empleadoSalt) = PasswordHasher.HashPassword("Empleado123*");
+            var empleadoUser = new Usuario(
+                nombreUsuario: "roberto.gutierrez",
+                nombreCompleto: "Roberto Alonso Gutiérrez Pérez",
+                correo: "roberto.gutierrez@tornomorales.com",
+                passwordHash: empleadoHash,
+                passwordSalt: empleadoSalt,
+                rol: "Empleado"
+            );
+            await context.Usuarios.AddAsync(empleadoUser);
             await context.SaveChangesAsync();
         }
 

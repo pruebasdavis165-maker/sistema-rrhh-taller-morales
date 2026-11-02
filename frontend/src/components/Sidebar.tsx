@@ -25,34 +25,44 @@ export default function Sidebar() {
     return null;
   }
 
+  const isEmpleado = user?.rol === 'Empleado';
   const isSupervisor = user?.rol === 'Supervisor';
 
-  const baseNavigation = [
-    { name: 'Dashboard', href: '/', icon: LayoutDashboard },
-    { name: 'Nómina y Planilla', href: '/planilla', icon: Banknote, tag: 'Ley 185' },
-    ...(!isSupervisor
-      ? [{ name: 'Reclutamiento', href: '/reclutamiento', icon: Briefcase, tag: 'RF-0008' }]
-      : []),
-    ...(!isSupervisor
-      ? [{ name: 'Gestión de Contratos', href: '/contratos', icon: FileText, tag: 'RF-0005' }]
-      : []),
-    { name: 'Gestión de Vacaciones', href: '/vacaciones', icon: Palmtree, tag: 'RF-0004' },
-    { name: 'Expedientes Laborales', href: '/empleados', icon: Users, tag: 'RF-0001' },
-    ...(!isSupervisor
-      ? [{ name: 'Trazabilidad y Auditoría', href: '/auditoria', icon: ShieldCheck, tag: 'RF-0006' }]
-      : []),
-  ];
+  let navigation: Array<{ name: string; href: string; icon: any; tag?: string }> = [];
 
-  const navigation = [...baseNavigation];
+  if (isEmpleado) {
+    const miExpedienteHref = user?.empleadoId ? `/empleados/${user.empleadoId}` : '/empleados';
+    navigation = [
+      { name: 'Mi Expediente', href: miExpedienteHref, icon: Users, tag: 'Autogestión' },
+      { name: 'Mis Vacaciones', href: '/vacaciones', icon: Palmtree, tag: 'RF-0004' },
+      { name: 'Mis Contratos', href: '/contratos', icon: FileText, tag: 'RF-0005' },
+    ];
+  } else {
+    navigation = [
+      { name: 'Dashboard', href: '/', icon: LayoutDashboard },
+      { name: 'Nómina y Planilla', href: '/planilla', icon: Banknote, tag: 'Ley 185' },
+      ...(!isSupervisor
+        ? [{ name: 'Reclutamiento', href: '/reclutamiento', icon: Briefcase, tag: 'RF-0008' }]
+        : []),
+      ...(!isSupervisor
+        ? [{ name: 'Gestión de Contratos', href: '/contratos', icon: FileText, tag: 'RF-0005' }]
+        : []),
+      { name: 'Gestión de Vacaciones', href: '/vacaciones', icon: Palmtree, tag: 'RF-0004' },
+      { name: 'Expedientes Laborales', href: '/empleados', icon: Users, tag: 'RF-0001' },
+      ...(!isSupervisor
+        ? [{ name: 'Trazabilidad y Auditoría', href: '/auditoria', icon: ShieldCheck, tag: 'RF-0006' }]
+        : []),
+    ];
 
-  // Si es Administrador o RRHH, mostrar gestión de usuarios
-  if (hasRole(['Administrador', 'RRHH'])) {
-    navigation.push({
-      name: 'Gestión de Usuarios',
-      href: '/usuarios',
-      icon: UserCog,
-      tag: 'Seguridad',
-    });
+    // Si es Administrador o RRHH, mostrar gestión de usuarios
+    if (hasRole(['Administrador', 'RRHH'])) {
+      navigation.push({
+        name: 'Gestión de Usuarios',
+        href: '/usuarios',
+        icon: UserCog,
+        tag: 'Seguridad',
+      });
+    }
   }
 
   const getInitials = (name?: string) => {
@@ -82,11 +92,11 @@ export default function Sidebar() {
         {/* Navigation Links */}
         <div className="flex-1 py-3 px-3 space-y-1 overflow-y-auto">
           <div className="px-3 pb-2 text-[11px] font-semibold tracking-wider text-slate-400 uppercase">
-            {isSupervisor ? 'Supervisión de Taller' : 'Módulos Principales'}
+            {isEmpleado ? 'Portal de Autogestión' : isSupervisor ? 'Supervisión de Taller' : 'Módulos Principales'}
           </div>
 
           {navigation.map((item) => {
-            const isActive = pathname === item.href;
+            const isActive = pathname === item.href || (item.href.startsWith('/empleados/') && pathname.startsWith('/empleados'));
             const Icon = item.icon;
 
             return (

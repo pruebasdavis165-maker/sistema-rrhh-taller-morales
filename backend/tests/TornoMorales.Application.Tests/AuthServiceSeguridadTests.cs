@@ -55,7 +55,7 @@ public class AuthServiceSeguridadTests
     {
         public int TokensGenerados { get; private set; }
 
-        public (string Token, DateTime Expiracion) GenerarToken(Usuario usuario)
+        public (string Token, DateTime Expiracion) GenerarToken(Usuario usuario, int? empleadoId = null)
         {
             TokensGenerados++;
             return ($"fake-jwt-token-{usuario.NombreUsuario}", DateTime.UtcNow.AddHours(8));
