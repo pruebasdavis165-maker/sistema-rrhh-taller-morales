@@ -32,7 +32,8 @@ export interface EmpleadoDto {
   correo: string;
   direccion?: string;
   cargo: string;
-  salarioBase: number;
+  salarioBase?: number | null;
+  salarioMensual?: number | null;
   activo: boolean;
   fechaIngreso: string;
   expedienteId?: number;
