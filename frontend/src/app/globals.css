@@ -1,13 +1,112 @@
 @import "tailwindcss";
 
+@theme {
+  --color-primary: #1A56DB;
+  --color-primary-hover: #1546B0;
+  --color-accent: #D946EF;
+  --color-alert: #F59E0B;
+  --color-success: #10B981;
+  --color-blue-600: #1A56DB;
+  --color-blue-700: #1546B0;
+  --color-emerald-500: #10B981;
+  --color-emerald-600: #10B981;
+  --color-amber-500: #F59E0B;
+  --color-fuchsia-500: #D946EF;
+  --color-fuchsia-600: #C026D3;
+  --font-sans: var(--font-sans), system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-montserrat: var(--font-montserrat), sans-serif;
+  --font-heading: var(--font-montserrat), sans-serif;
+}
+
 :root {
   --background: #f8fafc;
   --foreground: #0f172a;
+  --color-primary: #1A56DB;
+  --color-primary-hover: #1546B0;
+  --color-accent: #D946EF;
+  --color-alert: #F59E0B;
+  --color-success: #10B981;
 }
 
 body {
   background-color: var(--background);
   color: var(--foreground);
-  font-family: var(--font-sans, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif);
+  font-family: var(--font-sans), system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   min-height: 100vh;
+}
+
+/* ==============================================================================
+   Issue 3.2: Jerarquía Tipográfica Dual
+   Montserrat para títulos principales (h1, h2, h3) y Top Navbar
+   Inter (--font-sans) para cuerpo, modales y tablas de datos
+   ============================================================================== */
+h1, h2, h3, .font-heading {
+  font-family: var(--font-montserrat), sans-serif;
+  letter-spacing: -0.02em;
+}
+
+header a, 
+header button, 
+header nav a, 
+.top-navbar,
+.top-navbar a, 
+.top-navbar button,
+.top-navbar nav a {
+  font-family: var(--font-montserrat), sans-serif;
+}
+
+table, modal, .font-body {
+  font-family: var(--font-sans), sans-serif;
+}
+
+/* ==============================================================================
+   Issue 3.1 & 3.3: Paleta Corporativa Exacta, Radios Limpios y Sombras con Profundidad
+   Primario: #1A56DB
+   Acento:   #D946EF
+   Alerta:   #F59E0B
+   Éxito:    #10B981
+   ============================================================================== */
+.btn-primary {
+  background-color: #1A56DB;
+  color: #ffffff;
+  border-radius: 0.5rem; /* rounded-lg */
+  transition: all 0.15s ease-in-out;
+}
+.btn-primary:hover {
+  background-color: #1546B0;
+  box-shadow: 0 4px 6px -1px rgb(26 86 219 / 0.25);
+}
+
+.kpi-accent {
+  color: #D946EF;
+}
+.bg-accent-soft {
+  background-color: rgba(217, 70, 239, 0.1);
+  border-color: rgba(217, 70, 239, 0.2);
+}
+
+.badge-alert {
+  background-color: rgba(245, 158, 11, 0.1);
+  color: #B45309;
+  border-color: rgba(245, 158, 11, 0.3);
+}
+
+.badge-success {
+  background-color: rgba(16, 185, 129, 0.1);
+  color: #047857;
+  border-color: rgba(16, 185, 129, 0.3);
+}
+
+/* Contenedores con radios consistentes rounded-lg/rounded-xl y profundidad de elevación reactiva */
+.card-corporative {
+  background-color: #ffffff;
+  border-radius: 0.75rem; /* rounded-xl */
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.07), 0 2px 4px -2px rgb(0 0 0 / 0.05); /* shadow-md */
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  transition: box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1), transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.card-corporative-interactive:hover {
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.08), 0 4px 6px -4px rgb(0 0 0 / 0.04); /* hover:shadow-lg */
+  transform: translateY(-1px);
 }

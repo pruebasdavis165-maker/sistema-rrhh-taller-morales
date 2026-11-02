@@ -78,9 +78,9 @@ function HeaderContent({ title, subtitle, onSearch }: HeaderProps) {
   }, [isNotificationsOpen]);
 
   return (
-    <header className="h-16 bg-white border-b border-slate-200/80 px-8 flex items-center justify-between flex-shrink-0 sticky top-0 z-30 shadow-xs">
+    <header className="h-16 bg-white border-b border-slate-200/80 px-8 flex items-center justify-between flex-shrink-0 sticky top-0 z-30 shadow-xs top-navbar">
       <div>
-        <h1 className="text-base sm:text-lg font-bold tracking-tight text-slate-900">{title}</h1>
+        <h1 className="text-base sm:text-lg font-bold tracking-tight text-slate-900 font-heading">{title}</h1>
         {subtitle && <p className="text-xs text-slate-500 font-normal mt-0.5">{subtitle}</p>}
       </div>
 
@@ -94,7 +94,7 @@ function HeaderContent({ title, subtitle, onSearch }: HeaderProps) {
             onChange={(e) => setSearchTerm(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Buscar en el sistema..."
-            className="w-full pl-9 pr-8 py-1.5 bg-slate-50/70 hover:bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-700 placeholder:text-slate-400 focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition-colors"
+            className="w-full pl-9 pr-8 py-1.5 bg-slate-50/70 hover:bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-700 placeholder:text-slate-400 focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-[#1A56DB] transition-colors"
           />
           {searchTerm && (
             <button
@@ -108,7 +108,7 @@ function HeaderContent({ title, subtitle, onSearch }: HeaderProps) {
           )}
         </form>
 
-        {/* Notificaciones Interactivas con Dropdown */}
+        {/* Notificaciones Interactivas con Dropdown (rounded-xl) */}
         <div className="relative" ref={dropdownRef}>
           <button
             type="button"
@@ -117,21 +117,21 @@ function HeaderContent({ title, subtitle, onSearch }: HeaderProps) {
             aria-label="Notificaciones"
             className={`relative p-2 rounded-lg transition-colors cursor-pointer ${
               isNotificationsOpen
-                ? 'bg-blue-50 text-blue-600'
+                ? 'bg-blue-50 text-[#1A56DB]'
                 : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100'
             }`}
           >
             <Bell className="w-4 h-4" />
-            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-blue-600 rounded-full" />
+            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-[#1A56DB] rounded-full" />
           </button>
 
           {isNotificationsOpen && (
-            <div className="absolute right-0 mt-2 w-80 rounded-2xl bg-white border border-slate-200/90 shadow-xl py-3 px-4 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+            <div className="absolute right-0 mt-2 w-80 rounded-xl bg-white border border-slate-200/90 shadow-xl py-3 px-4 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
               <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-100">
-                <span className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                <span className="text-xs font-bold text-slate-800 uppercase tracking-wider font-heading">
                   Notificaciones
                 </span>
-                <span className="text-[10px] text-blue-600 font-semibold bg-blue-50 px-2 py-0.5 rounded-full">
+                <span className="text-[10px] text-[#1A56DB] font-semibold bg-blue-50 px-2 py-0.5 rounded-full border border-blue-100">
                   0 no leídas
                 </span>
               </div>
@@ -154,9 +154,9 @@ export default function Header(props: HeaderProps) {
   return (
     <Suspense
       fallback={
-        <header className="h-16 bg-white border-b border-slate-200/80 px-8 flex items-center justify-between flex-shrink-0 sticky top-0 z-30 shadow-xs">
+        <header className="h-16 bg-white border-b border-slate-200/80 px-8 flex items-center justify-between flex-shrink-0 sticky top-0 z-30 shadow-xs top-navbar">
           <div>
-            <h1 className="text-base sm:text-lg font-bold tracking-tight text-slate-900">{props.title}</h1>
+            <h1 className="text-base sm:text-lg font-bold tracking-tight text-slate-900 font-heading">{props.title}</h1>
             {props.subtitle && <p className="text-xs text-slate-500 font-normal mt-0.5">{props.subtitle}</p>}
           </div>
         </header>
