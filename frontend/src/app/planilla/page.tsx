@@ -25,6 +25,11 @@ function PlanillaContent() {
   const { user } = useAuth();
   const isSupervisor = user?.rol === 'Supervisor';
   const router = useRouter();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (user?.rol === 'Empleado') {
@@ -106,6 +111,8 @@ function PlanillaContent() {
       e.cargo.toLowerCase().includes(q)
     );
   });
+
+  if (!mounted) return null;
 
   // Cálculos consolidados de nómina
   const totalPlanilla = empleados.reduce((acc, curr) => acc + (curr.salarioMensual ?? curr.salarioBase ?? 0), 0);
