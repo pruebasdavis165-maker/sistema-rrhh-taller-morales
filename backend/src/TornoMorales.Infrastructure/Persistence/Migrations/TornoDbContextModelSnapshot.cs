@@ -411,6 +411,11 @@ namespace TornoMorales.Infrastructure.Persistence.Migrations
                     b.Property<DateTime>("FechaCreacion")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<DateTime>("FechaUltimoCambioPassword")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
                     b.Property<string>("NombreCompleto")
                         .IsRequired()
                         .HasMaxLength(150)

@@ -1,9 +1,11 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using TornoMorales.Application.Services;
 using TornoMorales.Domain.Ports;
 using TornoMorales.Infrastructure.Persistence;
 using TornoMorales.Infrastructure.Persistence.Repositories;
+using TornoMorales.Infrastructure.Services;
 
 namespace TornoMorales.Infrastructure;
 
@@ -35,6 +37,9 @@ public static class DependencyInjection
         services.AddScoped<ILiquidacionRepository, LiquidacionRepository>();
         services.AddScoped<IJornadaExtraordinariaRepository, JornadaExtraordinariaRepository>();
         services.AddScoped<IUnitOfWork, UnitOfWork>();
+
+        // ── Adaptador de Notificaciones / Alertas de Seguridad (Resend API) ──
+        services.AddHttpClient<IEmailNotificationService, ResendEmailNotificationService>();
 
         return services;
     }
