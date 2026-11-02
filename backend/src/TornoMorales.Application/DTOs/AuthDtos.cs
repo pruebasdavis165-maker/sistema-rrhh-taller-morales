@@ -9,7 +9,9 @@ public record UsuarioDto(
     bool Activo,
     DateTime FechaCreacion,
     DateTime? UltimoAcceso,
-    bool TotpHabilitado = false
+    bool TotpHabilitado = false,
+    DateTime? FechaUltimoCambioPassword = null,
+    bool RequiereRotacion = false
 );
 
 public record LoginRequest(
@@ -72,4 +74,3 @@ public record ConfigurarTotpResponse(
     string SecretoBase32,
     string ProvisioningUri
 );
-

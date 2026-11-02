@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using TornoMorales.Application.Common.Security;
 using TornoMorales.Application.DTOs;
 using TornoMorales.Domain.Entities;
@@ -13,19 +14,29 @@ public class AuthService : IAuthService
     private readonly IJwtTokenGenerator _jwtTokenGenerator;
     private readonly ITotpService _totpService;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IEmailNotificationService? _emailNotificationService;
+
+    // ── Issue 2.1: Alertas de Seguridad y Protección contra Fuerza Bruta ────────
+    public const int MaxIntentosFallidos = 5;
+    public const int VentanaMinutosBloqueo = 15;
+    public const string DestinatarioAlertaSeguridad = "davismunoz165@gmail.com";
+
+    private static readonly ConcurrentDictionary<string, List<DateTime>> _intentosFallidosPorUsuario = new(StringComparer.OrdinalIgnoreCase);
 
     public AuthService(
         IUsuarioRepository usuarioRepository,
         IAuditoriaRepository auditoriaRepository,
         IJwtTokenGenerator jwtTokenGenerator,
         ITotpService totpService,
-        IUnitOfWork unitOfWork)
+        IUnitOfWork unitOfWork,
+        IEmailNotificationService? emailNotificationService = null)
     {
         _usuarioRepository = usuarioRepository;
         _auditoriaRepository = auditoriaRepository;
         _jwtTokenGenerator = jwtTokenGenerator;
         _totpService = totpService;
         _unitOfWork = unitOfWork;
+        _emailNotificationService = emailNotificationService;
     }
 
     public async Task<LoginResult> LoginAsync(LoginRequest request, CancellationToken cancellationToken = default)
@@ -33,16 +44,39 @@ public class AuthService : IAuthService
         if (string.IsNullOrWhiteSpace(request.NombreUsuario) || string.IsNullOrWhiteSpace(request.Password))
             throw new ReglaNegocioException("Credenciales incompletas: Nombre de usuario y contraseña son requeridos.");
 
-        var usuario = await _usuarioRepository.ObtenerPorNombreUsuarioAsync(request.NombreUsuario.Trim(), cancellationToken);
+        var nombreNormalizado = request.NombreUsuario.Trim().ToLowerInvariant();
+
+        // 1. Verificación previa de bloqueo por fuerza bruta (5 intentos en 15 minutos)
+        if (EstaBloqueadoPorFuerzaBruta(nombreNormalizado))
+        {
+            throw new ReglaNegocioException("La cuenta se encuentra temporalmente bloqueada por exceso de intentos fallidos. Intente de nuevo en 15 minutos.");
+        }
+
+        var usuario = await _usuarioRepository.ObtenerPorNombreUsuarioAsync(nombreNormalizado, cancellationToken);
         if (usuario == null)
+        {
+            await RegistrarIntentoFallidoYVerificarBloqueoAsync(nombreNormalizado, cancellationToken);
             throw new ReglaNegocioException("Usuario o contraseña incorrectos.");
+        }
 
         if (!usuario.Activo)
             throw new ReglaNegocioException("La cuenta de usuario se encuentra desactivada.");
 
         bool esValido = PasswordHasher.VerifyPassword(request.Password, usuario.PasswordHash, usuario.PasswordSalt);
         if (!esValido)
+        {
+            await RegistrarIntentoFallidoYVerificarBloqueoAsync(nombreNormalizado, cancellationToken);
             throw new ReglaNegocioException("Usuario o contraseña incorrectos.");
+        }
+
+        // Credenciales correctas: resetear contador de intentos fallidos
+        LimpiarIntentosFallidos(nombreNormalizado);
+
+        // 2. Issue 2.3: Rotación obligatoria de credenciales tras 90 días (Zero Trust)
+        if (usuario.RequiereRotacion())
+        {
+            throw new PasswordExpiredException(usuario.NombreUsuario, usuario.FechaUltimoCambioPassword);
+        }
 
         // Regla: 2FA obligatorio para Administrador y RRHH, o si el usuario lo tiene habilitado voluntariamente
         bool rolRequiere2Fa = usuario.Rol.Equals("Administrador", StringComparison.OrdinalIgnoreCase) ||
@@ -163,7 +197,10 @@ public class AuthService : IAuthService
             u.Rol,
             u.Activo,
             u.FechaCreacion,
-            u.UltimoAcceso
+            u.UltimoAcceso,
+            u.TotpHabilitado,
+            u.FechaUltimoCambioPassword,
+            u.RequiereRotacion()
         )).ToList();
     }
 
@@ -181,7 +218,10 @@ public class AuthService : IAuthService
             usuario.Rol,
             usuario.Activo,
             usuario.FechaCreacion,
-            usuario.UltimoAcceso
+            usuario.UltimoAcceso,
+            usuario.TotpHabilitado,
+            usuario.FechaUltimoCambioPassword,
+            usuario.RequiereRotacion()
         );
     }
 
@@ -229,7 +269,10 @@ public class AuthService : IAuthService
             nuevoUsuario.Rol,
             nuevoUsuario.Activo,
             nuevoUsuario.FechaCreacion,
-            nuevoUsuario.UltimoAcceso
+            nuevoUsuario.UltimoAcceso,
+            nuevoUsuario.TotpHabilitado,
+            nuevoUsuario.FechaUltimoCambioPassword,
+            nuevoUsuario.RequiereRotacion()
         );
     }
 
@@ -271,7 +314,10 @@ public class AuthService : IAuthService
             usuario.Rol,
             usuario.Activo,
             usuario.FechaCreacion,
-            usuario.UltimoAcceso
+            usuario.UltimoAcceso,
+            usuario.TotpHabilitado,
+            usuario.FechaUltimoCambioPassword,
+            usuario.RequiereRotacion()
         );
     }
 
@@ -303,11 +349,9 @@ public class AuthService : IAuthService
         if (usuario == null || !usuario.Activo)
             throw new ReglaNegocioException("Usuario no válido o inactivo.");
 
-        // Generar nuevo secreto Base32 y su URI
         var secreto = _totpService.GenerarSecretoTotp();
         var uri = _totpService.GenerarProvisioningUri(secreto, usuario.NombreUsuario);
 
-        // Almacenar provisionalmente en la entidad (requiere confirmación)
         usuario.HabilitarTotp(secreto);
         _usuarioRepository.Actualizar(usuario);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
@@ -349,7 +393,6 @@ public class AuthService : IAuthService
         if (usuario == null)
             throw new ReglaNegocioException("Usuario no encontrado.");
 
-        // Validar si el rol lo prohíbe (Admin y RRHH requieren 2FA obligatorio)
         bool rolObligatorio = usuario.Rol.Equals("Administrador", StringComparison.OrdinalIgnoreCase) ||
                               usuario.Rol.Equals("RRHH", StringComparison.OrdinalIgnoreCase);
 
@@ -369,5 +412,78 @@ public class AuthService : IAuthService
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
     }
-}
 
+    // ── Métodos internos y auxiliares de Fuerza Bruta y Rate Limiting ─────────
+
+    private async Task RegistrarIntentoFallidoYVerificarBloqueoAsync(string nombreUsuario, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(nombreUsuario)) return;
+
+        var key = nombreUsuario.Trim().ToLowerInvariant();
+        var ahora = DateTime.UtcNow;
+        bool debeDispararAlerta = false;
+
+        var lista = _intentosFallidosPorUsuario.GetOrAdd(key, _ => new List<DateTime>());
+        lock (lista)
+        {
+            lista.RemoveAll(t => (ahora - t).TotalMinutes > VentanaMinutosBloqueo);
+            lista.Add(ahora);
+
+            if (lista.Count == MaxIntentosFallidos)
+            {
+                debeDispararAlerta = true;
+            }
+        }
+
+        if (debeDispararAlerta)
+        {
+            var asunto = "Alerta de Seguridad: Bloqueo de cuenta por fuerza bruta";
+            var mensaje = $"Se ha bloqueado temporalmente el acceso para el usuario '{nombreUsuario}' tras registrar {MaxIntentosFallidos} intentos fallidos en una ventana de {VentanaMinutosBloqueo} minutos. Notificación remitida al administrador global: {DestinatarioAlertaSeguridad}.";
+
+            if (_emailNotificationService != null)
+            {
+                await _emailNotificationService.EnviarAlertaSeguridadAsync(asunto, mensaje, cancellationToken);
+            }
+
+            await _auditoriaRepository.RegistrarAsync(new Auditoria(
+                entidad: "Usuario",
+                entidadId: nombreUsuario,
+                accion: "BLOQUEO_FUERZA_BRUTA",
+                usuario: "SISTEMA",
+                descripcion: $"Bloqueo preventivo de seguridad activado para '{nombreUsuario}' tras 5 intentos fallidos en 15 minutos. Notificación enviada a {DestinatarioAlertaSeguridad}."
+            ), cancellationToken);
+
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+        }
+    }
+
+    public static bool EstaBloqueadoPorFuerzaBruta(string nombreUsuario)
+    {
+        if (string.IsNullOrWhiteSpace(nombreUsuario)) return false;
+        var key = nombreUsuario.Trim().ToLowerInvariant();
+
+        if (_intentosFallidosPorUsuario.TryGetValue(key, out var lista))
+        {
+            lock (lista)
+            {
+                var ahora = DateTime.UtcNow;
+                lista.RemoveAll(t => (ahora - t).TotalMinutes > VentanaMinutosBloqueo);
+                return lista.Count >= MaxIntentosFallidos;
+            }
+        }
+
+        return false;
+    }
+
+    public static void LimpiarIntentosFallidos(string nombreUsuario)
+    {
+        if (string.IsNullOrWhiteSpace(nombreUsuario)) return;
+        var key = nombreUsuario.Trim().ToLowerInvariant();
+        _intentosFallidosPorUsuario.TryRemove(key, out _);
+    }
+
+    public static void ResetearTodosLosIntentosFallidos()
+    {
+        _intentosFallidosPorUsuario.Clear();
+    }
+}

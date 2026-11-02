@@ -14,6 +14,9 @@ public class Usuario : Entity<int>
     public DateTime FechaCreacion { get; private set; }
     public DateTime? UltimoAcceso { get; private set; }
 
+    // ── Issue 2.3: Rotación de Credenciales (90 días) ──────────────────────
+    public DateTime FechaUltimoCambioPassword { get; private set; }
+
     // ── 2FA TOTP (RFC 6238) ────────────────────────────────────────────────
     public string? TotpSecret { get; private set; }
     public bool TotpHabilitado { get; private set; }
@@ -26,7 +29,8 @@ public class Usuario : Entity<int>
         string correo,
         string passwordHash,
         string passwordSalt,
-        string rol = "RRHH")
+        string rol = "RRHH",
+        DateTime? fechaUltimoCambioPassword = null)
     {
         if (string.IsNullOrWhiteSpace(nombreUsuario))
             throw new ArgumentException("El nombre de usuario es obligatorio.", nameof(nombreUsuario));
@@ -45,6 +49,7 @@ public class Usuario : Entity<int>
         Rol = rol;
         Activo = true;
         FechaCreacion = DateTime.UtcNow;
+        FechaUltimoCambioPassword = fechaUltimoCambioPassword ?? FechaCreacion;
         TotpHabilitado = false;
     }
 
@@ -62,6 +67,19 @@ public class Usuario : Entity<int>
     {
         PasswordHash = nuevoHash;
         PasswordSalt = nuevoSalt;
+        FechaUltimoCambioPassword = DateTime.UtcNow;
+    }
+
+    public void ActualizarFechaUltimoCambioPassword(DateTime fecha)
+    {
+        FechaUltimoCambioPassword = fecha;
+    }
+
+    public bool RequiereRotacion() => RequiereRotacion(DateTime.UtcNow);
+
+    public bool RequiereRotacion(DateTime fechaReferencia)
+    {
+        return (fechaReferencia - FechaUltimoCambioPassword).TotalDays >= 90;
     }
 
     public void CambiarEstado(bool activo)
@@ -89,4 +107,3 @@ public class Usuario : Entity<int>
         TotpHabilitado = false;
     }
 }
-

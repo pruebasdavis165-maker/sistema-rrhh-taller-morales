@@ -90,6 +90,27 @@ public class ExceptionHandlingMiddleware
             context.Response.ContentType = "application/problem+json";
             await context.Response.WriteAsync(JsonSerializer.Serialize(problem));
         }
+        catch (PasswordExpiredException ex)
+        {
+            _logger.LogWarning("Contraseña expirada para el usuario {Usuario}: {Message}", ex.NombreUsuario, ex.Message);
+
+            var problem = new ProblemDetails
+            {
+                Status = (int)HttpStatusCode.Forbidden,
+                Title = "Contraseña Expirada (Rotación Obligatoria)",
+                Detail = ex.Message,
+                Instance = context.Request.Path,
+                Type = "https://tornomorales.com/errors/password-expired"
+            };
+            problem.Extensions.Add("code", ex.Code);
+            problem.Extensions.Add("nombreUsuario", ex.NombreUsuario);
+            problem.Extensions.Add("fechaUltimoCambioPassword", ex.FechaUltimoCambioPassword.ToString("o"));
+            problem.Extensions.Add("requiereCambioPassword", true);
+
+            context.Response.StatusCode = (int)HttpStatusCode.Forbidden;
+            context.Response.ContentType = "application/problem+json";
+            await context.Response.WriteAsync(JsonSerializer.Serialize(problem));
+        }
         catch (ReglaNegocioException ex)
         {
             _logger.LogWarning("Infracción de regla de negocio: {Message}", ex.Message);

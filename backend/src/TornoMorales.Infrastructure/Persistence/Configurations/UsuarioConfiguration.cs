@@ -51,6 +51,9 @@ public class UsuarioConfiguration : IEntityTypeConfiguration<Usuario>
         builder.Property(u => u.FechaCreacion)
             .IsRequired();
 
+        builder.Property(u => u.FechaUltimoCambioPassword)
+            .IsRequired();
+
         builder.Property(u => u.UltimoAcceso)
             .IsRequired(false);
 
