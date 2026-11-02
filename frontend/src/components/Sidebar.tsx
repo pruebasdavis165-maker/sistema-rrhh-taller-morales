@@ -10,7 +10,9 @@ import {
   ShieldCheck, 
   Wrench, 
   LogOut,
-  UserCog
+  UserCog,
+  Briefcase,
+  Banknote
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 
@@ -27,6 +29,10 @@ export default function Sidebar() {
 
   const baseNavigation = [
     { name: 'Dashboard', href: '/', icon: LayoutDashboard },
+    { name: 'Nómina y Planilla', href: '/planilla', icon: Banknote, tag: 'Ley 185' },
+    ...(!isSupervisor
+      ? [{ name: 'Reclutamiento', href: '/reclutamiento', icon: Briefcase, tag: 'RF-0008' }]
+      : []),
     ...(!isSupervisor
       ? [{ name: 'Gestión de Contratos', href: '/contratos', icon: FileText, tag: 'RF-0005' }]
       : []),

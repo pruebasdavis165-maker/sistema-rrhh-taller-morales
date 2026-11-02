@@ -38,3 +38,18 @@ public record ExpedienteLaboralDto(
     decimal? SalarioMensual,
     DateTime FechaApertura
 );
+
+/// <summary>
+/// Parámetros para registrar un nuevo empleado en el taller.
+/// </summary>
+public record CrearEmpleadoRequest(
+    string Nombres,
+    string Apellidos,
+    string Cedula,
+    string Telefono,
+    string Correo,
+    string Direccion,
+    string Cargo,
+    decimal? SalarioBase = null,
+    int? DepartamentoId = null
+);

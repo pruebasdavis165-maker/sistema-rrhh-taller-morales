@@ -317,3 +317,68 @@ export interface DashboardAnaliticaDto {
 
 
 
+
+// ──────────────────────────────────────────────────────────
+// Tipos para Registro de Empleados, Reclutamiento y Planilla
+// ──────────────────────────────────────────────────────────
+
+export interface CrearEmpleadoRequest {
+  nombres: string;
+  apellidos: string;
+  cedula: string;
+  telefono: string;
+  correo: string;
+  direccion: string;
+  cargo: string;
+  salarioBase?: number;
+  departamentoId?: number;
+}
+
+export interface DeduccionesDto {
+  salarioBruto: number;
+  inssLaboral: number;
+  porcentajeInss: number;
+  irRetencion: number;
+  totalDeducciones: number;
+  salarioNeto: number;
+  tramosAplicados?: string;
+}
+
+export interface CandidatoDto {
+  id: number;
+  nombres: string;
+  apellidos: string;
+  nombreCompleto: string;
+  telefono: string;
+  correo: string;
+  direccion: string;
+  estado: string;
+  resultado?: string | null;
+  reclutamientoId: number;
+}
+
+export interface ReclutamientoDto {
+  id: number;
+  cargoSolicitado: string;
+  descripcion: string;
+  fechaInicio: string;
+  fechaCierre?: string | null;
+  estado: string;
+  totalCandidatos: number;
+  candidatos: CandidatoDto[];
+}
+
+export interface CrearReclutamientoRequest {
+  cargoSolicitado: string;
+  descripcion: string;
+  fechaInicio?: string;
+  fechaCierre?: string;
+}
+
+export interface CrearCandidatoRequest {
+  nombres: string;
+  apellidos: string;
+  telefono: string;
+  correo: string;
+  direccion?: string;
+}

@@ -13,6 +13,12 @@ import {
   RechazarVacacionesRequest,
   SaldoVacacionesDto,
   EmpleadoDto,
+  CrearEmpleadoRequest,
+  DeduccionesDto,
+  ReclutamientoDto,
+  CandidatoDto,
+  CrearReclutamientoRequest,
+  CrearCandidatoRequest,
   AuditoriaDto,
   PagedResult,
   LoginRequest,
@@ -221,6 +227,67 @@ export const vacacionesApi = {
 export const empleadosApi = {
   listar: () => request<EmpleadoDto[]>('/empleados'),
   obtenerPorId: (id: number) => request<EmpleadoDto>(`/empleados/${id}`),
+  crear: (data: CrearEmpleadoRequest) =>
+    request<EmpleadoDto>('/empleados', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+};
+
+export const planillaApi = {
+  simularDeducciones: (salarioBruto: number) =>
+    request<DeduccionesDto>('/planilla/simular-deducciones', {
+      method: 'POST',
+      body: JSON.stringify({ salarioBruto }),
+    }),
+
+  descargarColillaPdf: async (empleadoId: number, nombreArchivo?: string): Promise<void> => {
+    const url = `${API_BASE_URL}/planilla/empleados/${empleadoId}/colilla-pdf`;
+    const response = await fetch(url, {
+      method: 'GET',
+      credentials: 'include',
+    });
+
+    if (!response.ok) {
+      let errorMsg = 'Error al descargar la colilla de pago';
+      try {
+        const errorJson = await response.json();
+        errorMsg = errorJson.mensaje || errorJson.detail || errorMsg;
+      } catch {
+        // Fallback genérico
+      }
+      throw new Error(errorMsg);
+    }
+
+    const blob = await response.blob();
+    const downloadUrl = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = downloadUrl;
+    link.download = nombreArchivo || `Colilla_Pago_Empleado_${empleadoId}.pdf`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(downloadUrl);
+  },
+};
+
+export const reclutamientoApi = {
+  listar: () => request<ReclutamientoDto[]>('/reclutamiento'),
+  crear: (data: CrearReclutamientoRequest) =>
+    request<ReclutamientoDto>('/reclutamiento', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  agregarCandidato: (reclutamientoId: number, data: CrearCandidatoRequest) =>
+    request<CandidatoDto>(`/reclutamiento/${reclutamientoId}/candidatos`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  actualizarEstadoCandidato: (candidatoId: number, nuevoEstado: string, resultado?: string) =>
+    request<CandidatoDto>(`/reclutamiento/candidatos/${candidatoId}/estado`, {
+      method: 'PATCH',
+      body: JSON.stringify({ nuevoEstado, resultado }),
+    }),
 };
 
 export const auditoriaApi = {
@@ -242,4 +309,3 @@ export const dashboardApi = {
   obtenerAnalitica: () => request<DashboardAnaliticaDto>('/dashboard/analitica'),
   obtenerAlertas: () => request<AlertaContratacionDto[]>('/dashboard/alertas'),
 };
-
