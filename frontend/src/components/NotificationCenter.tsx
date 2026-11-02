@@ -15,7 +15,8 @@ export interface AlertaNotificacion {
   leida: boolean;
 }
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+const rawApiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5076';
+const API_BASE_URL = rawApiUrl.replace(/\/api\/?$/, '');
 
 export default function NotificationCenter() {
   const [notificaciones, setNotificaciones] = useState<AlertaNotificacion[]>([]);
