@@ -1,6 +1,6 @@
+using TornoMorales.Application.Common.Security;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using TornoMorales.Api.Security;
 using TornoMorales.Application.Planilla.DTOs;
 using TornoMorales.Application.Planilla.Interfaces;
 using TornoMorales.Domain.Ports;

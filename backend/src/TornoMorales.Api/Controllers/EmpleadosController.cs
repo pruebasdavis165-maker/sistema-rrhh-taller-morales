@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using TornoMorales.Api.Security;
 using TornoMorales.Application.Common.Security;
 using TornoMorales.Application.DTOs;
 using TornoMorales.Domain.Entities;
