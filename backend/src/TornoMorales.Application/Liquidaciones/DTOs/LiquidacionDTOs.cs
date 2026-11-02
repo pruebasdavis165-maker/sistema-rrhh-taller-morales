@@ -50,6 +50,30 @@ public record LiquidacionDto
             FechaCalculo = DateTime.UtcNow
         };
     }
+
+    public static LiquidacionDto FromEntity(Liquidacion entity)
+    {
+        return new LiquidacionDto
+        {
+            EmpleadoId = entity.EmpleadoId,
+            NombreEmpleado = entity.Empleado?.NombreCompleto ?? string.Empty,
+            CedulaEmpleado = entity.Empleado?.Cedula ?? string.Empty,
+            Cargo = entity.Empleado?.Cargo ?? string.Empty,
+            FechaIngreso = entity.Empleado != null ? DateOnly.FromDateTime(entity.Empleado.FechaIngreso) : default,
+            FechaRescision = entity.FechaRescision,
+            SalarioMensual = entity.SalarioMensual,
+            SalarioDiario = entity.SalarioDiario,
+            AntiguedadAnios = entity.AntiguedadAnios,
+            MesesIndemnizacionArt45 = entity.MesesIndemnizacionArt45,
+            MontoIndemnizacionArt45 = entity.MontoIndemnizacionArt45,
+            DiasVacacionesPendientes = entity.DiasVacacionesPendientes,
+            MontoVacaciones = entity.MontoVacaciones,
+            DiasAguinaldo = entity.DiasAguinaldo,
+            MontoAguinaldo = entity.MontoAguinaldo,
+            TotalLiquidacion = entity.TotalLiquidacion,
+            FechaCalculo = entity.FechaCalculo
+        };
+    }
 }
 
 public record CalcularLiquidacionRequest

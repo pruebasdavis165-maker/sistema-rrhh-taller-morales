@@ -114,6 +114,26 @@ public class LiquidacionServiceTests
             Task.FromResult<IReadOnlyList<Auditoria>>(Logs.Take(cantidad).ToList());
     }
 
+    private class FakeLiquidacionRepository : ILiquidacionRepository
+    {
+        public readonly List<Liquidacion> Liquidaciones = new();
+
+        public Task<Liquidacion?> ObtenerPorIdAsync(int id, CancellationToken ct = default) =>
+            Task.FromResult(Liquidaciones.FirstOrDefault(l => l.Id == id));
+
+        public Task<IReadOnlyList<Liquidacion>> ObtenerPorEmpleadoIdAsync(int empleadoId, CancellationToken ct = default) =>
+            Task.FromResult<IReadOnlyList<Liquidacion>>(Liquidaciones.Where(l => l.EmpleadoId == empleadoId).ToList());
+
+        public Task<IReadOnlyList<Liquidacion>> ListarAsync(int skip = 0, int take = 50, CancellationToken ct = default) =>
+            Task.FromResult<IReadOnlyList<Liquidacion>>(Liquidaciones.Skip(skip).Take(take).ToList());
+
+        public Task AgregarAsync(Liquidacion liquidacion, CancellationToken ct = default)
+        {
+            Liquidaciones.Add(liquidacion);
+            return Task.CompletedTask;
+        }
+    }
+
     private class FakeUnitOfWork : IUnitOfWork
     {
         public bool Guardado { get; private set; }
@@ -185,6 +205,7 @@ public class LiquidacionServiceTests
         var contRepo = new FakeContratoRepository();
         var vacRepo = new FakeVacacionesRepository();
         var audRepo = new FakeAuditoriaRepository();
+        var liqRepo = new FakeLiquidacionRepository();
         var uow = new FakeUnitOfWork();
 
         var emp = CrearEmpleado(7, new DateTime(2023, 1, 1), salario: 20000m);
@@ -193,7 +214,7 @@ public class LiquidacionServiceTests
         var contrato = CrearContrato(202, 7, 20000m, new DateOnly(2023, 1, 1), EstadoContrato.Vigente);
         contRepo.Contratos.Add(contrato);
 
-        var service = new LiquidacionService(empRepo, contRepo, vacRepo, audRepo, uow);
+        var service = new LiquidacionService(empRepo, contRepo, vacRepo, audRepo, uow, liqRepo);
 
         var request = new EjecutarLiquidacionContratoRequest
         {
@@ -210,6 +231,14 @@ public class LiquidacionServiceTests
         contrato.Estado.Should().Be(EstadoContrato.Finalizado);
         contrato.MotivoCancelacionOFin.Should().Be(request.Motivo);
         uow.Guardado.Should().BeTrue();
+
+        // Validar persistencia en repositorio de liquidaciones
+        liqRepo.Liquidaciones.Should().HaveCount(1);
+        var liqGuardada = liqRepo.Liquidaciones.First();
+        liqGuardada.ContratoId.Should().Be(202);
+        liqGuardada.EmpleadoId.Should().Be(7);
+        liqGuardada.TotalLiquidacion.Should().Be(result.TotalLiquidacion);
+        liqGuardada.Motivo.Should().Be(request.Motivo);
 
         // Validar registro obligatorio en AuditoriaLog con justificación
         audRepo.Logs.Should().HaveCount(1);

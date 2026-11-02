@@ -72,6 +72,24 @@ public class ExceptionHandlingMiddleware
             context.Response.ContentType = "application/problem+json";
             await context.Response.WriteAsync(JsonSerializer.Serialize(problem));
         }
+        catch (LiquidacionInvalidaException ex)
+        {
+            _logger.LogWarning("Parámetros de liquidación inválidos: {Message}", ex.Message);
+
+            var problem = new ProblemDetails
+            {
+                Status = (int)HttpStatusCode.BadRequest,
+                Title = "Liquidación Laboral Inválida (Ley 185)",
+                Detail = ex.Message,
+                Instance = context.Request.Path,
+                Type = "https://tornomorales.com/errors/liquidacion-invalida"
+            };
+            problem.Extensions.Add("code", ex.Code);
+
+            context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
+            context.Response.ContentType = "application/problem+json";
+            await context.Response.WriteAsync(JsonSerializer.Serialize(problem));
+        }
         catch (ReglaNegocioException ex)
         {
             _logger.LogWarning("Infracción de regla de negocio: {Message}", ex.Message);

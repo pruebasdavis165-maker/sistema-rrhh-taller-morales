@@ -14,6 +14,7 @@ public class LiquidacionService : ILiquidacionService
     private readonly IEmpleadoRepository _empleadoRepository;
     private readonly IContratoRepository _contratoRepository;
     private readonly ISolicitudVacacionesRepository _vacacionesRepository;
+    private readonly ILiquidacionRepository? _liquidacionRepository;
     private readonly IAuditoriaRepository _auditoriaRepository;
     private readonly IUnitOfWork _unitOfWork;
 
@@ -22,13 +23,15 @@ public class LiquidacionService : ILiquidacionService
         IContratoRepository contratoRepository,
         ISolicitudVacacionesRepository vacacionesRepository,
         IAuditoriaRepository auditoriaRepository,
-        IUnitOfWork unitOfWork)
+        IUnitOfWork unitOfWork,
+        ILiquidacionRepository? liquidacionRepository = null)
     {
         _empleadoRepository = empleadoRepository;
         _contratoRepository = contratoRepository;
         _vacacionesRepository = vacacionesRepository;
         _auditoriaRepository = auditoriaRepository;
         _unitOfWork = unitOfWork;
+        _liquidacionRepository = liquidacionRepository;
     }
 
     public async Task<LiquidacionDto> CalcularLiquidacionAsync(
@@ -90,7 +93,31 @@ public class LiquidacionService : ILiquidacionService
         contrato.Finalizar(request.FechaRescision, request.Motivo);
         _contratoRepository.Actualizar(contrato);
 
-        // 3. Registrar auditoría inmutable con motivo legal
+        // 3. Persistir registro histórico de Liquidación
+        var liquidacionEntity = new Liquidacion(
+            empleadoId: empleado.Id,
+            contratoId: contrato.Id,
+            fechaRescision: request.FechaRescision,
+            salarioMensual: liquidacion.SalarioMensual,
+            salarioDiario: liquidacion.SalarioDiario,
+            antiguedadAnios: liquidacion.AntiguedadAnios,
+            mesesIndemnizacionArt45: liquidacion.MesesIndemnizacionArt45,
+            montoIndemnizacionArt45: liquidacion.MontoIndemnizacionArt45,
+            diasVacacionesPendientes: liquidacion.DiasVacacionesPendientes,
+            montoVacaciones: liquidacion.MontoVacaciones,
+            diasAguinaldo: liquidacion.DiasAguinaldo,
+            montoAguinaldo: liquidacion.MontoAguinaldo,
+            totalLiquidacion: liquidacion.TotalLiquidacion,
+            motivo: request.Motivo,
+            usuarioAuditoria: usuarioAuditoria
+        );
+
+        if (_liquidacionRepository != null)
+        {
+            await _liquidacionRepository.AgregarAsync(liquidacionEntity, ct);
+        }
+
+        // 4. Registrar auditoría inmutable con motivo legal
         var valoresNuevos = JsonSerializer.Serialize(new
         {
             contrato.Id,
@@ -122,8 +149,28 @@ public class LiquidacionService : ILiquidacionService
         );
 
         await _auditoriaRepository.RegistrarAsync(audit, ct);
+
+        // 5. Commit atómico del contrato finalizado, finiquito y bitácora de auditoría mediante Unit of Work
         await _unitOfWork.SaveChangesAsync(ct);
 
         return LiquidacionDto.FromDomain(empleado, liquidacion, request.FechaRescision, contrato.Cargo);
+    }
+
+    public async Task<IReadOnlyList<LiquidacionDto>> ObtenerPorEmpleadoIdAsync(int empleadoId, CancellationToken ct = default)
+    {
+        if (_liquidacionRepository == null)
+            return Array.Empty<LiquidacionDto>();
+
+        var registros = await _liquidacionRepository.ObtenerPorEmpleadoIdAsync(empleadoId, ct);
+        return registros.Select(LiquidacionDto.FromEntity).ToList();
+    }
+
+    public async Task<IReadOnlyList<LiquidacionDto>> ListarHistorialAsync(int skip = 0, int take = 50, CancellationToken ct = default)
+    {
+        if (_liquidacionRepository == null)
+            return Array.Empty<LiquidacionDto>();
+
+        var registros = await _liquidacionRepository.ListarAsync(skip, take, ct);
+        return registros.Select(LiquidacionDto.FromEntity).ToList();
     }
 }

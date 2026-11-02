@@ -225,6 +225,75 @@ namespace TornoMorales.Infrastructure.Persistence.Migrations
                     b.ToTable("ExpedientesLaborales", (string)null);
                 });
 
+            modelBuilder.Entity("TornoMorales.Domain.Entities.Liquidacion", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("AntiguedadAnios")
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<int>("ContratoId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("DiasAguinaldo")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal>("DiasVacacionesPendientes")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("EmpleadoId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("FechaCalculo")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateOnly>("FechaRescision")
+                        .HasColumnType("date");
+
+                    b.Property<decimal>("MesesIndemnizacionArt45")
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<decimal>("MontoAguinaldo")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("MontoIndemnizacionArt45")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("MontoVacaciones")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("Motivo")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<decimal>("SalarioDiario")
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<decimal>("SalarioMensual")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("TotalLiquidacion")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("UsuarioAuditoria")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ContratoId");
+
+                    b.HasIndex("EmpleadoId");
+
+                    b.ToTable("Liquidaciones", (string)null);
+                });
+
             modelBuilder.Entity("TornoMorales.Domain.Entities.SolicitudVacaciones", b =>
                 {
                     b.Property<int>("Id")
@@ -415,6 +484,25 @@ namespace TornoMorales.Infrastructure.Persistence.Migrations
                         .HasForeignKey("TornoMorales.Domain.Entities.ExpedienteLaboral", "EmpleadoId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.Navigation("Empleado");
+                });
+
+            modelBuilder.Entity("TornoMorales.Domain.Entities.Liquidacion", b =>
+                {
+                    b.HasOne("TornoMorales.Domain.Entities.Contrato", "Contrato")
+                        .WithMany()
+                        .HasForeignKey("ContratoId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("TornoMorales.Domain.Entities.Empleado", "Empleado")
+                        .WithMany()
+                        .HasForeignKey("EmpleadoId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Contrato");
 
                     b.Navigation("Empleado");
                 });
