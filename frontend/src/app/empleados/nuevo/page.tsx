@@ -7,7 +7,7 @@ import CustomSelect from '@/components/CustomSelect';
 import { empleadosApi } from '@/lib/api';
 import { CrearEmpleadoRequest } from '@/types';
 import Link from 'next/link';
-import { UserPlus, ArrowLeft, Loader2, CheckCircle2, AlertCircle, Sparkles } from 'lucide-react';
+import { UserPlus, ArrowLeft, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 
 const CARGOS_OPCIONES = [
   { value: 'Operario de Torno Convencional', label: 'Operario de Torno Convencional' },
@@ -102,17 +102,6 @@ function NuevoEmpleadoContent() {
           </Link>
         </div>
 
-        {vieneDeReclutamiento && (
-          <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-900 rounded-2xl flex items-center gap-3 text-xs shadow-xs animate-in fade-in">
-            <Sparkles className="w-5 h-5 text-emerald-600 shrink-0" />
-            <div>
-              <p className="font-bold">Postulante Aprobado para Contratación</p>
-              <p className="text-emerald-700 mt-0.5">
-                Se han precargado los datos del candidato evaluado en Reclutamiento. Complete la cédula y valide las condiciones para completar el alta laboral.
-              </p>
-            </div>
-          </div>
-        )}
 
         <div className="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200/80 shadow-xs space-y-6">
           <div className="flex items-center gap-3 pb-4 border-b border-slate-100">

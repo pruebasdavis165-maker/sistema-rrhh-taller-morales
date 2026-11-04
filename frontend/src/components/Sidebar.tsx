@@ -60,7 +60,6 @@ export default function Sidebar() {
         name: 'Gestión de Usuarios',
         href: '/usuarios',
         icon: UserCog,
-        tag: 'Seguridad',
       });
     }
   }

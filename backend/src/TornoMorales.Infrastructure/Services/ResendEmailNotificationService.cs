@@ -154,8 +154,10 @@ public class ResendEmailNotificationService : IEmailNotificationService
 
         using var client = new SmtpClient(smtpHost, smtpPort)
         {
+            UseDefaultCredentials = false,
             Credentials = new NetworkCredential(smtpUser, smtpPass),
-            EnableSsl = true
+            EnableSsl = true,
+            DeliveryMethod = SmtpDeliveryMethod.Network
         };
 
         using var mail = new MailMessage
