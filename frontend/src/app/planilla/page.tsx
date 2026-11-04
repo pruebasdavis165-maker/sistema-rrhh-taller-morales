@@ -24,10 +24,21 @@ import {
   Info
 } from 'lucide-react';
 
+// Formateador numérico universal blindado contra undefined / null / NaN
+const fmt = (val: any, minDec = 0, maxDec = 2): string => {
+  const num = Number(val);
+  if (isNaN(num)) return '0.00';
+  return num.toLocaleString('en-US', {
+    minimumFractionDigits: minDec,
+    maximumFractionDigits: maxDec,
+  });
+};
+
 // Cálculo normativo de respaldo (Ley No. 185 y Ley de Concertación Tributaria de Nicaragua)
 function calcularDeduccionesFallback(salarioBruto: number): DeduccionesDto {
-  const inssLaboral = Math.round(salarioBruto * 0.07 * 100) / 100;
-  const salarioNetoInss = salarioBruto - inssLaboral;
+  const bruto = Number(salarioBruto) || 0;
+  const inssLaboral = Math.round(bruto * 0.07 * 100) / 100;
+  const salarioNetoInss = bruto - inssLaboral;
   const expectativaAnual = salarioNetoInss * 12;
 
   let irAnual = 0;
@@ -45,13 +56,15 @@ function calcularDeduccionesFallback(salarioBruto: number): DeduccionesDto {
 
   const irRetencion = Math.round((irAnual / 12) * 100) / 100;
   const totalDeducciones = Math.round((inssLaboral + irRetencion) * 100) / 100;
-  const salarioNeto = Math.round((salarioBruto - totalDeducciones) * 100) / 100;
+  const salarioNeto = Math.round((bruto - totalDeducciones) * 100) / 100;
 
   return {
-    salarioBruto,
+    salarioBruto: bruto,
     inssLaboral,
     porcentajeInss: 7.0,
+    porcentajeInssLaboral: 0.07,
     irRetencion,
+    irMensual: irRetencion,
     totalDeducciones,
     salarioNeto,
     tramosAplicados: 'Ley de Concertación Tributaria Art. 23 (Nicaragua)',
@@ -93,7 +106,7 @@ function PlanillaContent() {
     setLoading(true);
     try {
       const data = await empleadosApi.listar();
-      setEmpleados(data || []);
+      setEmpleados(Array.isArray(data) ? data : []);
     } catch (err: any) {
       console.error('Error al obtener lista de empleados para nómina:', err);
       setErrorCarga(
@@ -107,17 +120,23 @@ function PlanillaContent() {
   }, []);
 
   const handleSimularDeducciones = async (monto: number) => {
-    if (!monto || monto <= 0) {
+    const val = Number(monto);
+    if (!val || val <= 0) {
       setResultadoSimulacion(null);
       return;
     }
     setSimulando(true);
     try {
-      const res = await planillaApi.simularDeducciones(monto);
-      setResultadoSimulacion(res);
+      const res = await planillaApi.simularDeducciones(val);
+      // Normalizar estructura independientemente de si el backend responde irMensual o irRetencion
+      setResultadoSimulacion({
+        ...res,
+        irRetencion: res.irMensual ?? res.irRetencion ?? 0,
+        irMensual: res.irMensual ?? res.irRetencion ?? 0,
+      });
     } catch (err) {
       console.warn('API de simulación de planilla inaccesible, aplicando cálculo normativo de respaldo local:', err);
-      setResultadoSimulacion(calcularDeduccionesFallback(monto));
+      setResultadoSimulacion(calcularDeduccionesFallback(val));
     } finally {
       setSimulando(false);
     }
@@ -137,7 +156,7 @@ function PlanillaContent() {
   const handleDescargarColilla = async (empleadoId: number, nombreEmpleado: string) => {
     try {
       setDescargandoId(empleadoId);
-      const sanitizedName = nombreEmpleado.replace(/\s+/g, '_');
+      const sanitizedName = (nombreEmpleado || 'Colaborador').replace(/\s+/g, '_');
       await planillaApi.descargarColillaPdf(
         empleadoId,
         `Colilla_Oficial_Ley185_${sanitizedName}.pdf`
@@ -153,9 +172,9 @@ function PlanillaContent() {
     if (!busqueda) return true;
     const q = busqueda.toLowerCase();
     return (
-      (e.nombreCompleto || '').toLowerCase().includes(q) ||
-      (e.cedula || '').toLowerCase().includes(q) ||
-      (e.cargo || '').toLowerCase().includes(q)
+      (e?.nombreCompleto || '').toLowerCase().includes(q) ||
+      (e?.cedula || '').toLowerCase().includes(q) ||
+      (e?.cargo || '').toLowerCase().includes(q)
     );
   });
 
@@ -170,7 +189,7 @@ function PlanillaContent() {
 
   // Cálculos consolidados de nómina seguros con respaldo en arreglos vacíos
   const totalPlanilla = (empleados || []).reduce(
-    (acc, curr) => acc + (curr?.salarioMensual ?? curr?.salarioBase ?? 0),
+    (acc, curr) => acc + Number(curr?.salarioMensual ?? curr?.salarioBase ?? 0),
     0
   );
   const inssLaboralEstimado = totalPlanilla * 0.07; // 7%
@@ -216,7 +235,7 @@ function PlanillaContent() {
               </div>
             </div>
             <p className="text-xl font-bold text-slate-900">
-              {isSupervisor ? '***' : `C$ ${totalPlanilla.toLocaleString()} NIO`}
+              {isSupervisor ? '***' : `C$ ${fmt(totalPlanilla)} NIO`}
             </p>
             <p className="text-[11px] text-slate-500">Costo total de salarios base del taller</p>
           </div>
@@ -229,7 +248,7 @@ function PlanillaContent() {
               </div>
             </div>
             <p className="text-xl font-bold text-amber-700">
-              {isSupervisor ? '***' : `C$ ${Math.round(inssLaboralEstimado).toLocaleString()} NIO`}
+              {isSupervisor ? '***' : `C$ ${fmt(inssLaboralEstimado)} NIO`}
             </p>
             <p className="text-[11px] text-slate-500">Retención total a los colaboradores</p>
           </div>
@@ -292,7 +311,7 @@ function PlanillaContent() {
                     setSalarioSimular(val);
                     handleSimularDeducciones(val);
                   }}
-                  className="w-full px-3.5 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-bold text-slate-800 transition-colors"
+                  className="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-300 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-bold text-slate-800 transition-colors"
                 />
               </div>
               <p className="text-[11px] text-slate-500">
@@ -305,28 +324,28 @@ function PlanillaContent() {
                 <div className="space-y-1">
                   <span className="text-[11px] text-slate-500 font-medium">INSS Laboral (7%)</span>
                   <p className="text-sm font-bold text-amber-700">
-                    C$ {resultadoSimulacion.inssLaboral.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    C$ {fmt(resultadoSimulacion.inssLaboral, 2)}
                   </p>
                 </div>
 
                 <div className="space-y-1">
                   <span className="text-[11px] text-slate-500 font-medium">Retención IR DGI</span>
                   <p className="text-sm font-bold text-rose-700">
-                    C$ {resultadoSimulacion.irRetencion.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    C$ {fmt(resultadoSimulacion.irMensual ?? resultadoSimulacion.irRetencion ?? 0, 2)}
                   </p>
                 </div>
 
                 <div className="space-y-1">
                   <span className="text-[11px] text-slate-500 font-medium">Total Retenciones</span>
                   <p className="text-sm font-bold text-slate-700">
-                    C$ {resultadoSimulacion.totalDeducciones.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    C$ {fmt(resultadoSimulacion.totalDeducciones, 2)}
                   </p>
                 </div>
 
                 <div className="space-y-1 bg-emerald-50/80 p-2.5 rounded-xl border border-emerald-200">
                   <span className="text-[11px] text-emerald-800 font-bold">Salario Neto a Recibir</span>
                   <p className="text-sm font-black text-emerald-700">
-                    C$ {resultadoSimulacion.salarioNeto.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    C$ {fmt(resultadoSimulacion.salarioNeto, 2)}
                   </p>
                 </div>
               </div>
@@ -351,7 +370,7 @@ function PlanillaContent() {
                 placeholder="Buscar por nombre, cargo o cédula..."
                 value={busqueda}
                 onChange={(e) => setBusqueda(e.target.value)}
-                className="w-full pl-9 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
+                className="w-full pl-9 pr-3 py-2 text-xs bg-slate-50 border border-slate-300 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
               />
             </div>
           </div>
@@ -396,7 +415,7 @@ function PlanillaContent() {
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-xs">
                   {(empleadosFiltrados || []).map((emp) => {
-                    const salario = emp.salarioMensual ?? emp.salarioBase ?? 0;
+                    const salario = Number(emp?.salarioMensual ?? emp?.salarioBase ?? 0);
                     const inss = Math.round(salario * 0.07);
                     const neto = salario - inss;
 
@@ -405,28 +424,28 @@ function PlanillaContent() {
                         <td className="py-3.5 px-4 font-medium text-slate-900">
                           <div className="flex items-center gap-2.5">
                             <div className="w-8 h-8 rounded-xl bg-blue-100 text-blue-700 font-bold flex items-center justify-center shrink-0">
-                              {(emp.nombres || 'E').charAt(0)}{(emp.apellidos || '').charAt(0)}
+                              {(emp?.nombres || 'E').charAt(0)}{(emp?.apellidos || '').charAt(0)}
                             </div>
                             <div>
-                              <p className="font-semibold text-slate-900">{emp.nombreCompleto}</p>
-                              <p className="text-[11px] text-slate-400">{emp.correo}</p>
+                              <p className="font-semibold text-slate-900">{emp?.nombreCompleto || 'Colaborador'}</p>
+                              <p className="text-[11px] text-slate-400">{emp?.correo || ''}</p>
                             </div>
                           </div>
                         </td>
-                        <td className="py-3.5 px-4 font-mono text-slate-700">{emp.cedula}</td>
-                        <td className="py-3.5 px-4 text-slate-700">{emp.cargo}</td>
+                        <td className="py-3.5 px-4 font-mono text-slate-700">{emp?.cedula || '---'}</td>
+                        <td className="py-3.5 px-4 text-slate-700">{emp?.cargo || '---'}</td>
                         <td className="py-3.5 px-4 text-right font-semibold text-slate-800">
-                          {isSupervisor ? '***' : `C$ ${salario.toLocaleString()}`}
+                          {isSupervisor ? '***' : `C$ ${fmt(salario)}`}
                         </td>
                         <td className="py-3.5 px-4 text-right text-amber-700 font-medium">
-                          {isSupervisor ? '***' : `-C$ ${inss.toLocaleString()}`}
+                          {isSupervisor ? '***' : `-C$ ${fmt(inss)}`}
                         </td>
                         <td className="py-3.5 px-4 text-right font-bold text-emerald-700">
-                          {isSupervisor ? '***' : `C$ ${neto.toLocaleString()}`}
+                          {isSupervisor ? '***' : `C$ ${fmt(neto)}`}
                         </td>
                         <td className="py-3.5 px-4 text-center">
                           <button
-                            onClick={() => handleDescargarColilla(emp.id, emp.nombreCompleto)}
+                            onClick={() => handleDescargarColilla(emp.id, emp?.nombreCompleto || '')}
                             disabled={descargandoId === emp.id}
                             title="Descargar Colilla de Pago Oficial (QuestPDF)"
                             className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold text-xs shadow-xs hover:shadow transition-all cursor-pointer disabled:opacity-50"

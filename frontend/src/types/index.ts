@@ -342,7 +342,9 @@ export interface DeduccionesDto {
   salarioBruto: number;
   inssLaboral: number;
   porcentajeInss: number;
-  irRetencion: number;
+  irRetencion?: number;
+  irMensual?: number;
+  porcentajeInssLaboral?: number;
   totalDeducciones: number;
   salarioNeto: number;
   tramosAplicados?: string;
