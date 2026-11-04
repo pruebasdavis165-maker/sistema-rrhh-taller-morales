@@ -169,7 +169,7 @@ function ContratosContent() {
     <div className="flex-1 flex flex-col bg-slate-50 min-h-screen">
       <Header
         title="Administración de Contratos Laborales"
-        subtitle="Control de vigencias y validación de no solapamiento temporal (RF-0005)"
+        subtitle="Control de vigencias y validación de no solapamiento temporal"
       />
 
       <main className="p-8 max-w-7xl w-full mx-auto space-y-6">
@@ -190,7 +190,7 @@ function ContratosContent() {
             <div>
               <p className="text-xs font-semibold text-emerald-600 uppercase tracking-wider">Vigentes Activos</p>
               <h3 className="text-2xl font-bold text-slate-800 mt-1">{vigentes}</h3>
-              <p className="text-[11px] text-slate-400 mt-0.5">Sin solapamientos (RF-0005)</p>
+              <p className="text-[11px] text-slate-400 mt-0.5">Sin solapamientos</p>
             </div>
             <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
               <CheckCircle className="w-6 h-6" />
@@ -441,7 +441,7 @@ export default function ContratosPage() {
         <div className="flex-1 flex flex-col bg-slate-50 min-h-screen">
           <Header
             title="Administración de Contratos Laborales"
-            subtitle="Control de vigencia, plazos y formalización de personal técnico (RF-0005)"
+            subtitle="Control de vigencia, plazos y formalización de personal técnico"
           />
           <div className="p-12 flex flex-col items-center justify-center text-slate-400 gap-3">
             <Loader2 className="w-8 h-8 animate-spin text-blue-600" />

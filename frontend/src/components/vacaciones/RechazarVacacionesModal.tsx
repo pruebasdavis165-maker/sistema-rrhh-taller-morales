@@ -51,7 +51,7 @@ export default function RechazarVacacionesModal({
       isOpen={isOpen}
       onClose={onClose}
       title="Denegación de Solicitud de Vacaciones"
-      subtitle="Registro formal de justificación administrativa para no autorización (RF-0004)"
+      subtitle="Registro formal de justificación administrativa para no autorización"
       maxWidth="md"
     >
       <form onSubmit={handleSubmit} className="space-y-4">

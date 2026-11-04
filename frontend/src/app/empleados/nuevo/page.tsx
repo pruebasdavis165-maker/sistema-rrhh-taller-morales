@@ -88,7 +88,7 @@ function NuevoEmpleadoContent() {
     <div className="flex-1 flex flex-col bg-slate-50 min-h-screen">
       <Header
         title="Registrar Nuevo Colaborador"
-        subtitle="Alta de operarios y personal técnico de taller (RF-0001)"
+        subtitle="Alta de operarios y personal técnico de taller"
       />
 
       <main className="p-8 max-w-3xl w-full mx-auto space-y-6">
@@ -268,7 +268,7 @@ export default function NuevoEmpleadoPage() {
         <div className="flex-1 flex flex-col bg-slate-50 min-h-screen">
           <Header
             title="Registrar Nuevo Colaborador"
-            subtitle="Alta de operarios y personal técnico de taller (RF-0001)"
+            subtitle="Alta de operarios y personal técnico de taller"
           />
           <div className="p-12 flex flex-col items-center justify-center text-slate-400 gap-3">
             <Loader2 className="w-8 h-8 animate-spin text-blue-600" />

@@ -5,7 +5,7 @@ export default function EmpleadosLoading() {
     <div className="flex-1 flex flex-col bg-slate-50 min-h-screen">
       <Header
         title="Expedientes Laborales de Empleados"
-        subtitle="Registro, consulta y estado del personal del taller (RF-0001)"
+        subtitle="Registro, consulta y estado del personal del taller"
       />
 
       <main className="p-8 max-w-7xl w-full mx-auto space-y-6 animate-pulse">

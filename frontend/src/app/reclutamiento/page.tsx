@@ -225,7 +225,7 @@ export default function ReclutamientoPage() {
   return (
     <div className="flex-1 flex flex-col bg-slate-50 min-h-screen">
       <Header
-        title="Módulo de Reclutamiento y Selección (RF-0008)"
+        title="Módulo de Reclutamiento y Selección"
         subtitle="Gestión de vacantes operativas de taller y postulaciones de técnicos especializados"
       />
 

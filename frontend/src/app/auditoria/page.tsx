@@ -55,7 +55,7 @@ function AuditoriaContent() {
           </div>
           <h2 className="text-xl font-bold text-slate-900">Bitácora Global de Auditoría</h2>
           <p className="text-xs text-slate-500 leading-relaxed">
-            Su cuenta posee el rol de <strong>Supervisor de Taller</strong>. El registro inmutable de trazabilidad y auditoría de eventos de seguridad (RF-0006) está restringido a Administradores y Recursos Humanos.
+            Su cuenta posee el rol de <strong>Supervisor de Taller</strong>. El registro inmutable de trazabilidad y auditoría de eventos de seguridad está restringido a Administradores y Recursos Humanos.
           </p>
           <div className="pt-2">
             <Link
@@ -84,7 +84,7 @@ function AuditoriaContent() {
     <div className="flex-1 flex flex-col bg-slate-50 min-h-screen">
       <Header
         title="Registro de Operaciones y Auditoría"
-        subtitle="Trazabilidad completa de modificaciones, contratos y aprobaciones (RF-0006)"
+        subtitle="Trazabilidad completa de modificaciones, contratos y aprobaciones"
       />
 
       <main className="p-8 max-w-7xl w-full mx-auto space-y-6">
@@ -199,7 +199,7 @@ export default function AuditoriaPage() {
         <div className="flex-1 flex flex-col bg-slate-50 min-h-screen">
           <Header
             title="Registro de Operaciones y Auditoría"
-            subtitle="Trazabilidad completa de modificaciones, contratos y aprobaciones (RF-0006)"
+            subtitle="Trazabilidad completa de modificaciones, contratos y aprobaciones"
           />
           <div className="p-12 flex flex-col items-center justify-center text-slate-400 gap-3">
             <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />

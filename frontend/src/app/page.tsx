@@ -199,7 +199,7 @@ export default function DashboardPage() {
                   <h3 className="text-3xl font-extrabold text-slate-800 mt-1 font-heading">
                     {loading ? <Loader2 className="w-5 h-5 animate-spin text-[#10B981]" /> : analitica?.contratosVigentes}
                   </h3>
-                  <p className="text-[11px] text-slate-400 mt-1">Sin solapamiento (RF-0005)</p>
+                  <p className="text-[11px] text-slate-400 mt-1">Sin solapamiento</p>
                 </div>
                 <div className="w-12 h-12 rounded-xl bg-emerald-50 text-[#10B981] flex items-center justify-center border border-emerald-100">
                   <FileText className="w-6 h-6" />
@@ -585,12 +585,12 @@ export default function DashboardPage() {
                 </p>
               </div>
 
-              {/* Historial de Auditoría Reciente (RF-0006) */}
+              {/* Historial de Auditoría Reciente */}
               <div className="lg:col-span-2 bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs space-y-4">
                 <div className="flex items-center justify-between pb-2 border-b border-slate-100">
                   <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2 font-heading">
                     <ShieldCheck className="w-4 h-4 text-[#1A56DB]" />
-                    Registro Reciente de Operaciones y Auditoría (RF-0006)
+                    Registro Reciente de Operaciones y Auditoría
                   </h3>
                   <Link href="/auditoria" className="text-xs text-[#1A56DB] hover:text-[#1546B0] font-medium hover:underline">
                     Ver historial completo

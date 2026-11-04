@@ -5,7 +5,7 @@ export default function ContratosLoading() {
     <div className="flex-1 flex flex-col bg-slate-50 min-h-screen">
       <Header
         title="Gestión de Contratos Laborales"
-        subtitle="Administración legal, prórrogas y cláusulas conforme a la Ley No. 185 (RF-0005)"
+        subtitle="Administración legal, prórrogas y cláusulas conforme a la Ley No. 185"
       />
 
       <main className="p-8 max-w-7xl w-full mx-auto space-y-6 animate-pulse">
