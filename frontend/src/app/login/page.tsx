@@ -221,14 +221,14 @@ export default function LoginPage() {
             <p className="text-[11px] text-slate-500 font-semibold uppercase tracking-wider mb-2">
               Credenciales de prueba preconfiguradas:
             </p>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               <button
                 type="button"
                 onClick={() => handleQuickLogin('admin', 'Admin123*')}
                 className="p-2 rounded-lg bg-slate-800/60 hover:bg-slate-800 border border-slate-700/80 text-left transition-colors text-[11px]"
               >
                 <p className="font-semibold text-blue-400">Admin</p>
-                <p className="text-slate-400">admin</p>
+                <p className="text-slate-400 truncate">admin</p>
               </button>
               <button
                 type="button"
@@ -236,7 +236,7 @@ export default function LoginPage() {
                 className="p-2 rounded-lg bg-slate-800/60 hover:bg-slate-800 border border-slate-700/80 text-left transition-colors text-[11px]"
               >
                 <p className="font-semibold text-emerald-400">RRHH</p>
-                <p className="text-slate-400">dayerling.rrhh</p>
+                <p className="text-slate-400 truncate">dayerling.rrhh</p>
               </button>
               <button
                 type="button"
@@ -244,7 +244,15 @@ export default function LoginPage() {
                 className="p-2 rounded-lg bg-slate-800/60 hover:bg-slate-800 border border-slate-700/80 text-left transition-colors text-[11px]"
               >
                 <p className="font-semibold text-amber-400">Supervisor</p>
-                <p className="text-slate-400">supervisor.taller</p>
+                <p className="text-slate-400 truncate">supervisor.taller</p>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleQuickLogin('roberto.gutierrez', 'Empleado123*')}
+                className="p-2 rounded-lg bg-slate-800/60 hover:bg-slate-800 border border-slate-700/80 text-left transition-colors text-[11px]"
+              >
+                <p className="font-semibold text-purple-400">Empleado</p>
+                <p className="text-slate-400 truncate" title="roberto.gutierrez">roberto.gutierrez</p>
               </button>
             </div>
           </div>
