@@ -41,3 +41,5 @@ jobs:
           file: ./frontend/Dockerfile
           push: true
           tags: ghcr.io/${{ env.REPO_LOWERCASE }}-frontend:latest
+          build-args: |
+            NEXT_PUBLIC_API_URL=https://backend-production-1da75.up.railway.app/api
