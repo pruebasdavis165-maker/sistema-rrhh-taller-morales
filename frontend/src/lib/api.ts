@@ -34,7 +34,34 @@ import {
   ConfigurarTotpResponse,
 } from '@/types';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5076/api';
+/**
+ * Retorna la URL base del backend para llamadas de API.
+ * Prioriza la variable de entorno NEXT_PUBLIC_API_URL.
+ * Si no está definida y se ejecuta en el navegador (cliente) fuera de localhost,
+ * resuelve dinámicamente al backend en Railway.
+ */
+export function getApiBaseUrl(): string {
+  const envUrl = process.env.NEXT_PUBLIC_API_URL;
+  if (envUrl && envUrl.trim() !== '') {
+    return envUrl.trim().replace(/\/+$/, '');
+  }
+
+  // Detección automática en el cliente para despliegues en producción (Railway, Vercel, etc.)
+  if (typeof window !== 'undefined') {
+    const hostname = window.location.hostname;
+    const isLocalhost =
+      hostname === 'localhost' ||
+      hostname === '127.0.0.1' ||
+      hostname.startsWith('192.168.') ||
+      hostname.startsWith('10.');
+
+    if (!isLocalhost) {
+      return 'https://backend-production-1da75.up.railway.app/api';
+    }
+  }
+
+  return 'http://localhost:5076/api';
+}
 
 export class ApiError extends Error {
   status: number;
@@ -53,7 +80,9 @@ export class ApiError extends Error {
  * para autenticación basada en Cookie HTTP-Only / SameSite=Strict
  */
 async function request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-  const url = `${API_BASE_URL}${endpoint}`;
+  const baseUrl = getApiBaseUrl();
+  const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+  const url = `${baseUrl}${cleanEndpoint}`;
   
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
@@ -242,7 +271,8 @@ export const planillaApi = {
     }),
 
   descargarColillaPdf: async (empleadoId: number, nombreArchivo?: string): Promise<void> => {
-    const url = `${API_BASE_URL}/planilla/empleados/${empleadoId}/colilla-pdf`;
+    const baseUrl = getApiBaseUrl();
+    const url = `${baseUrl}/planilla/empleados/${empleadoId}/colilla-pdf`;
     const response = await fetch(url, {
       method: 'GET',
       credentials: 'include',
@@ -303,7 +333,8 @@ export const reclutamientoApi = {
     }),
   descargarDocumentoCandidato: async (candidatoId: number, nombreDescarga: string = 'CV_Candidato.pdf') => {
     const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-    const res = await fetch(`${API_BASE_URL}/reclutamiento/candidatos/${candidatoId}/documento`, {
+    const baseUrl = getApiBaseUrl();
+    const res = await fetch(`${baseUrl}/reclutamiento/candidatos/${candidatoId}/documento`, {
       headers: {
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },

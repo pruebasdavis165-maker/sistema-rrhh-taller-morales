@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { HubConnection, HubConnectionBuilder, LogLevel } from '@microsoft/signalr';
 import { Bell, AlertTriangle, Info, CheckCircle2, AlertOctagon, ExternalLink, Check, Trash2 } from 'lucide-react';
 import Link from 'next/link';
+import { getApiBaseUrl } from '@/lib/api';
 
 export interface AlertaNotificacion {
   id: string;
@@ -15,8 +16,10 @@ export interface AlertaNotificacion {
   leida: boolean;
 }
 
-const rawApiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5076';
-const API_BASE_URL = rawApiUrl.replace(/\/api\/?$/, '');
+export function getNotificationBaseUrl(): string {
+  const apiBase = getApiBaseUrl();
+  return apiBase.replace(/\/api\/?$/, '');
+}
 
 export default function NotificationCenter() {
   const [notificaciones, setNotificaciones] = useState<AlertaNotificacion[]>([]);
@@ -32,7 +35,8 @@ export default function NotificationCenter() {
   useEffect(() => {
     async function cargarNotificacionesIniciales() {
       try {
-        const res = await fetch(`${API_BASE_URL}/api/notificaciones/resumen`, {
+        const baseUrl = getNotificationBaseUrl();
+        const res = await fetch(`${baseUrl}/api/notificaciones/resumen`, {
           credentials: 'include',
         });
         if (res.ok) {
@@ -49,8 +53,9 @@ export default function NotificationCenter() {
 
   // 2. Conectar al Hub de SignalR
   useEffect(() => {
+    const baseUrl = getNotificationBaseUrl();
     const connection = new HubConnectionBuilder()
-      .withUrl(`${API_BASE_URL}/hubs/notificaciones`, {
+      .withUrl(`${baseUrl}/hubs/notificaciones`, {
         withCredentials: true,
       })
       .withAutomaticReconnect()

@@ -9,7 +9,7 @@ FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-ARG NEXT_PUBLIC_API_URL
+ARG NEXT_PUBLIC_API_URL=https://backend-production-1da75.up.railway.app/api
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 RUN npm run build
 
@@ -17,7 +17,7 @@ FROM base AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=3000
-ARG NEXT_PUBLIC_API_URL
+ARG NEXT_PUBLIC_API_URL=https://backend-production-1da75.up.railway.app/api
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 # Railway/Render inyectan el puerto dinámicamente
 EXPOSE 3000 
