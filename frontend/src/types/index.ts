@@ -237,6 +237,7 @@ export interface SesionUsuarioDto {
   expiracionToken: string;
   totpHabilitado?: boolean;
   empleadoId?: number;
+  token?: string;
 }
 
 export interface LoginResultDto {
@@ -251,6 +252,7 @@ export interface LoginResultDto {
   rol?: RolUsuario;
   expiracionToken?: string;
   empleadoId?: number;
+  token?: string;
 }
 
 export interface VerificarTotpRequest {
@@ -318,9 +320,6 @@ export interface DashboardAnaliticaDto {
   comparativaPlanilla: ComparativaPlanillaMensualDto[];
   metricasAusentismo: MetricaAusentismoDto[];
 }
-
-
-
 
 // ──────────────────────────────────────────────────────────
 // Tipos para Registro de Empleados, Reclutamiento y Planilla
@@ -394,4 +393,3 @@ export interface CrearCandidatoRequest {
   documentoBase64?: string | null;
   documentoTipo?: string | null;
 }
-

@@ -76,23 +76,33 @@ export class ApiError extends Error {
 }
 
 /**
- * Cliente HTTP unificado con inclusión automática de cookies (credentials: 'include')
- * para autenticación basada en Cookie HTTP-Only / SameSite=Strict
+ * Cliente HTTP unificado con inclusión automática de cookies y credenciales cross-site
+ * (credentials: 'include') más soporte para cabecera Authorization de respaldo.
  */
 async function request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const baseUrl = getApiBaseUrl();
   const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
   const url = `${baseUrl}${cleanEndpoint}`;
   
+  // Soporte dual: si existe token en localStorage, incluirlo como Authorization Bearer
+  let authHeader: Record<string, string> = {};
+  if (typeof window !== 'undefined') {
+    const token = localStorage.getItem('tm_token');
+    if (token) {
+      authHeader = { Authorization: `Bearer ${token}` };
+    }
+  }
+
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
+    ...authHeader,
     ...(options.headers as Record<string, string> || {}),
   };
 
   const fetchOptions: RequestInit = {
     ...options,
     headers,
-    credentials: 'include', // Clave: Envía y recibe cookies HTTP-only de sesión
+    credentials: 'include', // Clave: Envía y recibe cookies HTTP-only cross-site (Railway)
   };
 
   try {
@@ -122,6 +132,24 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
     throw new ApiError('No se pudo conectar con el servidor backend (.NET)', 0, null);
   }
 }
+
+/**
+ * Instancia de cliente API exportada con soporte estricto de credenciales cross-site.
+ */
+export const api = {
+  get baseURL() {
+    return getApiBaseUrl();
+  },
+  withCredentials: true,
+  get: <T>(endpoint: string, options?: RequestInit) => request<T>(endpoint, { ...options, method: 'GET' }),
+  post: <T>(endpoint: string, body?: any, options?: RequestInit) =>
+    request<T>(endpoint, { ...options, method: 'POST', body: body !== undefined ? JSON.stringify(body) : undefined }),
+  put: <T>(endpoint: string, body?: any, options?: RequestInit) =>
+    request<T>(endpoint, { ...options, method: 'PUT', body: body !== undefined ? JSON.stringify(body) : undefined }),
+  patch: <T>(endpoint: string, body?: any, options?: RequestInit) =>
+    request<T>(endpoint, { ...options, method: 'PATCH', body: body !== undefined ? JSON.stringify(body) : undefined }),
+  delete: <T>(endpoint: string, options?: RequestInit) => request<T>(endpoint, { ...options, method: 'DELETE' }),
+};
 
 export const authApi = {
   login: (data: LoginRequest) =>
@@ -273,8 +301,18 @@ export const planillaApi = {
   descargarColillaPdf: async (empleadoId: number, nombreArchivo?: string): Promise<void> => {
     const baseUrl = getApiBaseUrl();
     const url = `${baseUrl}/planilla/empleados/${empleadoId}/colilla-pdf`;
+    
+    let authHeader: Record<string, string> = {};
+    if (typeof window !== 'undefined') {
+      const token = localStorage.getItem('tm_token');
+      if (token) {
+        authHeader = { Authorization: `Bearer ${token}` };
+      }
+    }
+
     const response = await fetch(url, {
       method: 'GET',
+      headers: authHeader,
       credentials: 'include',
     });
 
@@ -332,9 +370,10 @@ export const reclutamientoApi = {
       method: 'DELETE',
     }),
   descargarDocumentoCandidato: async (candidatoId: number, nombreDescarga: string = 'CV_Candidato.pdf') => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    const token = typeof window !== 'undefined' ? (localStorage.getItem('tm_token') || localStorage.getItem('token')) : null;
     const baseUrl = getApiBaseUrl();
     const res = await fetch(`${baseUrl}/reclutamiento/candidatos/${candidatoId}/documento`, {
+      credentials: 'include',
       headers: {
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },

@@ -45,7 +45,8 @@ public record SesionUsuarioDto(
     string Rol,
     DateTime ExpiracionToken,
     bool TotpHabilitado = false,
-    int? EmpleadoId = null
+    int? EmpleadoId = null,
+    string? Token = null
 );
 
 public record CrearUsuarioRequest(
@@ -68,15 +69,20 @@ public record CambiarPasswordExpiradaRequest(
     string NombreUsuario,
     string PasswordActual,
     string PasswordNueva,
-    string ConfirmarPasswordNueva
-);
-
-public record VerificarTotpRequest(
-    int UsuarioId,
-    string Codigo
+    string PasswordConfirmacion
 );
 
 public record ConfigurarTotpResponse(
     string SecretoBase32,
     string ProvisioningUri
+);
+
+public record SetupTotpDto(
+    string SecretoBase32,
+    string ProvisioningUri
+);
+
+public record VerificarTotpRequest(
+    int UsuarioId,
+    string Codigo
 );

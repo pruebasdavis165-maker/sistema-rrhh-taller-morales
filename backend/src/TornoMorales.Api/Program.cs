@@ -1,5 +1,6 @@
-using System.Text;
+﻿using System.Text;
 using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
@@ -117,10 +118,25 @@ var jwtKey = builder.Configuration["JWT_SECRET_KEY"]
 var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "TornoMoralesApi";
 var jwtAudience = builder.Configuration["Jwt:Audience"] ?? "TornoMoralesClient";
 
+// ── Configuración de Política de Cookies para Cross-Site (SameSite=None, Secure=Always) ──
+builder.Services.Configure<CookiePolicyOptions>(options =>
+{
+    options.MinimumSameSitePolicy = SameSiteMode.None;
+    options.Secure = CookieSecurePolicy.Always;
+});
+
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
     options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+})
+.AddCookie(options =>
+{
+    options.Cookie.Name = "tm_auth_token";
+    options.Cookie.SameSite = SameSiteMode.None;
+    options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+    options.Cookie.HttpOnly = true;
+    options.Cookie.IsEssential = true;
 })
 .AddJwtBearer(options =>
 {
@@ -138,12 +154,17 @@ builder.Services.AddAuthentication(options =>
         ClockSkew = TimeSpan.Zero
     };
 
-    // Soporte para leer token JWT desde Cookies HTTP-Only ("tm_auth_token" o "access_token")
+    // Soporte para leer token JWT desde Cookies HTTP-Only ("tm_auth_token" o "access_token") o cabecera Authorization
     options.Events = new JwtBearerEvents
     {
         OnMessageReceived = context =>
         {
-            if (context.Request.Cookies.TryGetValue("tm_auth_token", out var tmCookie) && !string.IsNullOrEmpty(tmCookie))
+            var authHeader = context.Request.Headers["Authorization"].FirstOrDefault();
+            if (!string.IsNullOrEmpty(authHeader) && authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+            {
+                context.Token = authHeader.Substring("Bearer ".Length).Trim();
+            }
+            else if (context.Request.Cookies.TryGetValue("tm_auth_token", out var tmCookie) && !string.IsNullOrEmpty(tmCookie))
             {
                 context.Token = tmCookie;
             }
@@ -209,7 +230,9 @@ app.UseSwaggerUI(c =>
     c.RoutePrefix = "swagger";
 });
 
+// Orden estricto de Middleware
 app.UseCors("AllowFrontend");
+app.UseCookiePolicy();
 app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();

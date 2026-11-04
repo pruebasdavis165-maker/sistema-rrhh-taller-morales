@@ -52,7 +52,7 @@ public class AuthController : ControllerBase
         }
 
         var response = result.Sesion!;
-        // Emitir Cookie HTTP-only, Secure y SameSite=Strict para mitigar riesgos XSS
+        // Emitir Cookie HTTP-only, Secure y SameSite=None para habilitar cross-site entre subdominios en Railway
         EstablecerAuthCookie(response.Token, response.Expiracion);
 
         int? empleadoId = response.EmpleadoId;
@@ -69,7 +69,8 @@ public class AuthController : ControllerBase
             Correo: response.Correo,
             Rol: response.Rol,
             ExpiracionToken: response.Expiracion,
-            EmpleadoId: empleadoId
+            EmpleadoId: empleadoId,
+            Token: response.Token
         );
 
         return Ok(usuarioSesion);
@@ -98,7 +99,8 @@ public class AuthController : ControllerBase
             Rol: response.Rol,
             ExpiracionToken: response.Expiracion,
             TotpHabilitado: true,
-            EmpleadoId: empleadoId
+            EmpleadoId: empleadoId,
+            Token: response.Token
         );
 
         return Ok(usuarioSesion);
@@ -148,7 +150,7 @@ public class AuthController : ControllerBase
         {
             HttpOnly = true,
             Secure = true,
-            SameSite = SameSiteMode.Strict,
+            SameSite = SameSiteMode.None,
             Path = "/"
         });
 
@@ -180,7 +182,8 @@ public class AuthController : ControllerBase
             Correo: response.Correo,
             Rol: response.Rol,
             ExpiracionToken: response.Expiracion,
-            EmpleadoId: empleadoId
+            EmpleadoId: empleadoId,
+            Token: response.Token
         );
 
         return Ok(usuarioSesion);
@@ -205,8 +208,9 @@ public class AuthController : ControllerBase
         var cookieOptions = new CookieOptions
         {
             HttpOnly = true,
-            Secure = true, // HTTPS en producción / navegadores modernos
-            SameSite = SameSiteMode.Strict,
+            Secure = true, // Obligatorio para SameSite=None y conexiones HTTPS en Railway
+            SameSite = SameSiteMode.None, // Permitir envío cross-site entre subdominios
+            IsEssential = true,
             Expires = expiracion,
             Path = "/"
         };

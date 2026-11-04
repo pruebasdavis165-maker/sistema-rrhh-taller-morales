@@ -24,6 +24,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const USER_SESSION_KEY = 'tm_user_session';
+const TOKEN_KEY = 'tm_token';
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthContextType['user']>(null);
@@ -35,7 +36,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     async function verificarSesion() {
       try {
-        // Intenta obtener el perfil del usuario autenticado mediante la Cookie HTTP-only
+        // Intenta obtener el perfil del usuario autenticado mediante la Cookie HTTP-only o Token de cabecera
         const perfil = await authApi.perfil();
         const userData = {
           nombreUsuario: perfil.nombreUsuario,
@@ -54,6 +55,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setUser(JSON.parse(cached));
           } catch {
             localStorage.removeItem(USER_SESSION_KEY);
+            localStorage.removeItem(TOKEN_KEY);
             setUser(null);
           }
         } else {
@@ -93,6 +95,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return { requiereTotp: true, usuarioId: res.usuarioId };
     }
 
+    if (res.token) {
+      localStorage.setItem(TOKEN_KEY, res.token);
+    }
+
     const userData = {
       nombreUsuario: res.nombreUsuario!,
       nombreCompleto: res.nombreCompleto!,
@@ -115,6 +121,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const verificarTotp = async (usuarioId: number, codigo: string) => {
     const sesion = await authApi.verificarTotp({ usuarioId, codigo });
+
+    if (sesion.token) {
+      localStorage.setItem(TOKEN_KEY, sesion.token);
+    }
 
     const userData = {
       nombreUsuario: sesion.nombreUsuario,
@@ -142,6 +152,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setUser(null);
       localStorage.removeItem(USER_SESSION_KEY);
+      localStorage.removeItem(TOKEN_KEY);
       router.push('/login');
     }
   };

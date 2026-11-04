@@ -1,4 +1,4 @@
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using TornoMorales.Application.Common.Security;
 using TornoMorales.Application.DTOs;
 using TornoMorales.Domain.Entities;
@@ -23,13 +23,16 @@ public class AuthService : IAuthService
 
     private static readonly ConcurrentDictionary<string, List<DateTime>> _intentosFallidosPorUsuario = new(StringComparer.OrdinalIgnoreCase);
 
+    private readonly IEmpleadoRepository? _empleadoRepository;
+
     public AuthService(
         IUsuarioRepository usuarioRepository,
         IAuditoriaRepository auditoriaRepository,
         IJwtTokenGenerator jwtTokenGenerator,
         ITotpService totpService,
         IUnitOfWork unitOfWork,
-        IEmailNotificationService? emailNotificationService = null)
+        IEmailNotificationService? emailNotificationService = null,
+        IEmpleadoRepository? empleadoRepository = null)
     {
         _usuarioRepository = usuarioRepository;
         _auditoriaRepository = auditoriaRepository;
@@ -37,6 +40,23 @@ public class AuthService : IAuthService
         _totpService = totpService;
         _unitOfWork = unitOfWork;
         _emailNotificationService = emailNotificationService;
+        _empleadoRepository = empleadoRepository;
+    }
+
+    private async Task<int?> BuscarEmpleadoIdAsync(string correo, CancellationToken cancellationToken)
+    {
+        if (_empleadoRepository == null || string.IsNullOrWhiteSpace(correo))
+            return null;
+
+        try
+        {
+            var empleados = await _empleadoRepository.ListarAsync(cancellationToken);
+            return empleados.FirstOrDefault(e => e.Correo.Equals(correo, StringComparison.OrdinalIgnoreCase))?.Id;
+        }
+        catch
+        {
+            return null;
+        }
     }
 
     public async Task<LoginResult> LoginAsync(LoginRequest request, CancellationToken cancellationToken = default)
@@ -97,7 +117,8 @@ public class AuthService : IAuthService
         usuario.RegistrarAcceso();
         _usuarioRepository.Actualizar(usuario);
 
-        var (token, expiracion) = _jwtTokenGenerator.GenerarToken(usuario);
+        var empleadoId = await BuscarEmpleadoIdAsync(usuario.Correo, cancellationToken);
+        var (token, expiracion) = _jwtTokenGenerator.GenerarToken(usuario, empleadoId);
 
         await _auditoriaRepository.RegistrarAsync(new Auditoria(
             entidad: "Usuario",
@@ -115,7 +136,8 @@ public class AuthService : IAuthService
             NombreCompleto: usuario.NombreCompleto,
             Correo: usuario.Correo,
             Rol: usuario.Rol,
-            Expiracion: expiracion
+            Expiracion: expiracion,
+            EmpleadoId: empleadoId
         );
 
         return new LoginResult(
@@ -141,7 +163,8 @@ public class AuthService : IAuthService
         usuario.RegistrarAcceso();
         _usuarioRepository.Actualizar(usuario);
 
-        var (token, expiracion) = _jwtTokenGenerator.GenerarToken(usuario);
+        var empleadoId = await BuscarEmpleadoIdAsync(usuario.Correo, cancellationToken);
+        var (token, expiracion) = _jwtTokenGenerator.GenerarToken(usuario, empleadoId);
 
         await _auditoriaRepository.RegistrarAsync(new Auditoria(
             entidad: "Usuario",
@@ -159,7 +182,8 @@ public class AuthService : IAuthService
             NombreCompleto: usuario.NombreCompleto,
             Correo: usuario.Correo,
             Rol: usuario.Rol,
-            Expiracion: expiracion
+            Expiracion: expiracion,
+            EmpleadoId: empleadoId
         );
     }
 
@@ -172,7 +196,8 @@ public class AuthService : IAuthService
         usuario.RegistrarAcceso();
         _usuarioRepository.Actualizar(usuario);
 
-        var (token, expiracion) = _jwtTokenGenerator.GenerarToken(usuario);
+        var empleadoId = await BuscarEmpleadoIdAsync(usuario.Correo, cancellationToken);
+        var (token, expiracion) = _jwtTokenGenerator.GenerarToken(usuario, empleadoId);
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
@@ -182,7 +207,8 @@ public class AuthService : IAuthService
             NombreCompleto: usuario.NombreCompleto,
             Correo: usuario.Correo,
             Rol: usuario.Rol,
-            Expiracion: expiracion
+            Expiracion: expiracion,
+            EmpleadoId: empleadoId
         );
     }
 
