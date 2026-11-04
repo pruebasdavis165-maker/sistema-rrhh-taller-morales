@@ -14,7 +14,17 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddInfrastructureServices(this IServiceCollection services, IConfiguration configuration)
     {
-        var connectionString = configuration.GetConnectionString("DefaultConnection")
+        // Obtener la cadena de conexión priorizando GetConnectionString("DefaultConnection")
+        var rawConnection = configuration.GetConnectionString("DefaultConnection")
+            ?? configuration["DefaultConnection"]
+            ?? configuration["DATABASE_URL"]
+            ?? configuration["DATABASE_PUBLIC_URL"]
+            ?? configuration["DATABASE_PRIVATE_URL"]
+            ?? Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection")
+            ?? Environment.GetEnvironmentVariable("DefaultConnection")
+            ?? Environment.GetEnvironmentVariable("DATABASE_URL");
+
+        var connectionString = ParseConnectionString(rawConnection)
             ?? "Host=localhost;Port=5432;Database=tornomorales_rrhh;Username=postgres;Password=postgres";
 
         services.AddDbContext<TornoDbContext>(options =>
@@ -46,5 +56,37 @@ public static class DependencyInjection
         services.AddSingleton<IGeneradorColillaPdfService, GeneradorColillaPdfService>();
 
         return services;
+    }
+
+    /// <summary>
+    /// Convierte URLs en formato postgres:// o postgresql:// (estándar en Railway/Render)
+    /// a una cadena de conexión Npgsql válida.
+    /// </summary>
+    private static string? ParseConnectionString(string? rawConnection)
+    {
+        if (string.IsNullOrWhiteSpace(rawConnection)) return null;
+
+        if (rawConnection.StartsWith("postgres://", StringComparison.OrdinalIgnoreCase) ||
+            rawConnection.StartsWith("postgresql://", StringComparison.OrdinalIgnoreCase))
+        {
+            try
+            {
+                var uri = new Uri(rawConnection);
+                var userInfo = uri.UserInfo.Split(':', 2);
+                var username = userInfo.Length > 0 ? Uri.UnescapeDataString(userInfo[0]) : "";
+                var password = userInfo.Length > 1 ? Uri.UnescapeDataString(userInfo[1]) : "";
+                var host = uri.Host;
+                var port = uri.Port > 0 ? uri.Port : 5432;
+                var database = uri.AbsolutePath.TrimStart('/');
+
+                return $"Host={host};Port={port};Database={database};Username={username};Password={password};SSL Mode=Prefer;Trust Server Certificate=true;";
+            }
+            catch
+            {
+                return rawConnection;
+            }
+        }
+
+        return rawConnection;
     }
 }

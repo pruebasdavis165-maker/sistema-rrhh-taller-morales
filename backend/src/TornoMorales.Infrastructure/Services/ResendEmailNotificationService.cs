@@ -12,7 +12,8 @@ namespace TornoMorales.Infrastructure.Services;
 /// <summary>
 /// Adaptador de infraestructura para el envío de notificaciones y alertas transaccionales
 /// mediante el API HTTP de Resend (https://api.resend.com/emails) con fallback automático
-/// hacia SMTP (Gmail) cuando Resend responde con error o está limitado en modo sandbox.
+/// hacia SMTP cuando Resend no está configurado, responde con error o está limitado en modo sandbox.
+/// Todas las credenciales se leen estrictamente desde variables de entorno y configuración.
 /// </summary>
 public class ResendEmailNotificationService : IEmailNotificationService
 {
@@ -20,9 +21,8 @@ public class ResendEmailNotificationService : IEmailNotificationService
     private readonly IConfiguration _configuration;
     private readonly ILogger<ResendEmailNotificationService> _logger;
 
-    public const string DestinatarioSeguridadFijo = "davismunoz165@gmail.com";
-    public const string RemitentePorDefecto = "onboarding@resend.dev";
     private const string ResendApiUrl = "https://api.resend.com/emails";
+    private const string RemitentePorDefecto = "onboarding@resend.dev";
 
     public ResendEmailNotificationService(
         HttpClient httpClient,
@@ -35,10 +35,15 @@ public class ResendEmailNotificationService : IEmailNotificationService
     }
 
     /// <summary>
-    /// Envía una alerta de seguridad transaccional al administrador global davismunoz165@gmail.com.
+    /// Envía una alerta de seguridad transaccional al correo del administrador del sistema.
     /// </summary>
     public async Task EnviarAlertaSeguridadAsync(string asunto, string mensaje, CancellationToken cancellationToken = default)
     {
+        var adminEmail = _configuration["ADMIN_EMAIL"]
+            ?? _configuration["SMTP_USER"]
+            ?? _configuration["Smtp:User"]
+            ?? "admin@tornomorales.com";
+
         var html = $@"<div style=""font-family: Arial, sans-serif; padding: 24px; border: 1px solid #e2e8f0; border-radius: 8px; background-color: #f8fafc;"">
             <div style=""display: flex; align-items: center; margin-bottom: 16px;"">
                 <h2 style=""color: #dc2626; margin: 0; font-size: 20px;"">⚠️ {asunto}</h2>
@@ -48,7 +53,7 @@ public class ResendEmailNotificationService : IEmailNotificationService
             </div>
             <p style=""font-size: 13px; color: #64748b; margin: 0;"">
                 <strong>Fecha/Hora UTC:</strong> {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC<br />
-                <strong>Destinatario de Seguridad:</strong> {DestinatarioSeguridadFijo}
+                <strong>Destinatario de Seguridad:</strong> {adminEmail}
             </p>
             <hr style=""border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;"" />
             <p style=""font-size: 12px; color: #94a3b8; margin: 0;"">
@@ -56,14 +61,14 @@ public class ResendEmailNotificationService : IEmailNotificationService
             </p>
         </div>";
 
-        var text = $"{asunto}\n\n{mensaje}\n\nFecha/Hora UTC: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC\nDestinatario: {DestinatarioSeguridadFijo}";
+        var text = $"{asunto}\n\n{mensaje}\n\nFecha/Hora UTC: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC\nDestinatario: {adminEmail}";
 
-        await EnviarCorreoAsync(DestinatarioSeguridadFijo, asunto, html, text, cancellationToken);
+        await EnviarCorreoAsync(adminEmail, asunto, html, text, cancellationToken);
     }
 
     /// <summary>
-    /// Envía un correo electrónico intentando primero vía Resend API y recurriendo a SMTP (Gmail)
-    /// si ocurre cualquier fallo o restricción de sandbox.
+    /// Envía un correo electrónico intentando primero vía Resend API y recurriendo a SMTP
+    /// si ocurre cualquier fallo, limitación de sandbox o falta de clave.
     /// </summary>
     public async Task<bool> EnviarCorreoAsync(
         string destinatario,
@@ -74,63 +79,67 @@ public class ResendEmailNotificationService : IEmailNotificationService
     {
         bool enviado = false;
 
-        // 1. Intentar entrega primaria vía Resend API
-        try
+        // 1. Intentar entrega primaria vía Resend API si la clave existe y no es placeholder
+        var apiKey = _configuration["RESEND_API_KEY"]
+            ?? _configuration["Resend:ApiKey"]
+            ?? _configuration["ResendApiKey"]
+            ?? Environment.GetEnvironmentVariable("RESEND_API_KEY")
+            ?? Environment.GetEnvironmentVariable("Resend__ApiKey");
+
+        if (!string.IsNullOrWhiteSpace(apiKey) && !apiKey.Contains("CONFIGURED"))
         {
-            var apiKey = Environment.GetEnvironmentVariable("Resend__ApiKey")
-                ?? Environment.GetEnvironmentVariable("ResendApiKey")
-                ?? _configuration["Resend:ApiKey"]
-                ?? _configuration["ResendApiKey"];
-
-            if (string.IsNullOrWhiteSpace(apiKey) || apiKey.Contains("CONFIGURED"))
+            try
             {
-                // Credencial oficial provista para el entorno
-                apiKey = string.Concat("re_", "25GJx9SA_", "EJ3cFBymLWeoQAwmxTrSoTnX");
+                var remitente = _configuration["RESEND_FROM"]
+                    ?? _configuration["Resend:From"]
+                    ?? RemitentePorDefecto;
+
+                var payload = new
+                {
+                    from = remitente,
+                    to = new[] { destinatario },
+                    subject = asunto,
+                    html = cuerpoHtml,
+                    text = cuerpoTexto ?? cuerpoHtml
+                };
+
+                var jsonContent = JsonSerializer.Serialize(payload);
+                using var requestMessage = new HttpRequestMessage(HttpMethod.Post, ResendApiUrl)
+                {
+                    Content = new StringContent(jsonContent, Encoding.UTF8, "application/json")
+                };
+                requestMessage.Headers.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
+
+                _logger.LogInformation("Enviando correo vía Resend API hacia {Destinatario} con asunto '{Asunto}'", destinatario, asunto);
+                var response = await _httpClient.SendAsync(requestMessage, cancellationToken);
+                var responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    _logger.LogInformation("Correo enviado exitosamente vía Resend API a {Destinatario}. Respuesta: {ResponseBody}", destinatario, responseBody);
+                    return true;
+                }
+
+                _logger.LogWarning("Resend API no completó el envío ({StatusCode}: {ResponseBody}). Activando fallback hacia SMTP...", response.StatusCode, responseBody);
             }
-
-            var remitente = _configuration["Resend:From"] ?? RemitentePorDefecto;
-
-            var payload = new
+            catch (Exception ex)
             {
-                from = remitente,
-                to = new[] { destinatario },
-                subject = asunto,
-                html = cuerpoHtml,
-                text = cuerpoTexto ?? cuerpoHtml
-            };
-
-            var jsonContent = JsonSerializer.Serialize(payload);
-            using var requestMessage = new HttpRequestMessage(HttpMethod.Post, ResendApiUrl)
-            {
-                Content = new StringContent(jsonContent, Encoding.UTF8, "application/json")
-            };
-            requestMessage.Headers.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
-
-            _logger.LogInformation("Enviando correo vía Resend API hacia {Destinatario} con asunto '{Asunto}'", destinatario, asunto);
-            var response = await _httpClient.SendAsync(requestMessage, cancellationToken);
-            var responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
-
-            if (response.IsSuccessStatusCode)
-            {
-                _logger.LogInformation("Correo enviado exitosamente vía Resend API a {Destinatario}. Respuesta: {ResponseBody}", destinatario, responseBody);
-                return true;
+                _logger.LogWarning(ex, "Error al comunicar con Resend API. Activando fallback hacia SMTP...");
             }
-
-            _logger.LogWarning("Resend API falló ({StatusCode}: {ResponseBody}). Activando fallback dual hacia SMTP...", response.StatusCode, responseBody);
         }
-        catch (Exception ex)
+        else
         {
-            _logger.LogWarning(ex, "Error al comunicar con Resend API. Activando fallback dual hacia SMTP...");
+            _logger.LogInformation("RESEND_API_KEY no configurado o en valor plantilla. Procediendo directamente con canal SMTP...");
         }
 
-        // 2. Fallback Secundario Dual: SMTP con Gmail
+        // 2. Fallback Secundario Dual: SMTP (lectura desde variables de entorno)
         try
         {
             enviado = await EnviarPorSmtpAsync(destinatario, asunto, cuerpoHtml, cuerpoTexto, cancellationToken);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Fallback de SMTP también falló al intentar entregar correo a {Destinatario}.", destinatario);
+            _logger.LogError(ex, "El servicio SMTP falló al intentar entregar correo a {Destinatario}.", destinatario);
         }
 
         return enviado;
@@ -143,20 +152,47 @@ public class ResendEmailNotificationService : IEmailNotificationService
         string? cuerpoTexto,
         CancellationToken cancellationToken)
     {
-        var smtpHost = _configuration["Smtp:Host"] ?? "smtp.gmail.com";
-        var smtpPort = int.TryParse(_configuration["Smtp:Port"], out var p) ? p : 587;
-        var smtpUser = _configuration["Smtp:User"] ?? "pruebasdavis16@gmail.com";
-        var smtpPassRaw = _configuration["Smtp:Password"] ?? "ldmv jpnc wjvg wlwc";
-        var smtpPass = smtpPassRaw.Replace(" ", ""); // Limpiar espacios de App Password de Google
-        var smtpFrom = _configuration["Smtp:From"] ?? smtpUser;
+        var smtpHost = _configuration["SMTP_HOST"]
+            ?? _configuration["Smtp:Host"]
+            ?? "smtp.gmail.com";
 
-        _logger.LogInformation("Ejecutando entrega de correo vía SMTP Fallback ({Host}:{Port}) hacia {Destinatario}", smtpHost, smtpPort, destinatario);
+        var portStr = _configuration["SMTP_PORT"]
+            ?? _configuration["Smtp:Port"];
+        var smtpPort = int.TryParse(portStr, out var p) ? p : 587;
+
+        var smtpUser = _configuration["SMTP_USER"]
+            ?? _configuration["Smtp:User"]
+            ?? Environment.GetEnvironmentVariable("SMTP_USER");
+
+        var smtpPassRaw = _configuration["SMTP_PASSWORD"]
+            ?? _configuration["Smtp:Password"]
+            ?? Environment.GetEnvironmentVariable("SMTP_PASSWORD");
+
+        if (string.IsNullOrWhiteSpace(smtpUser) || string.IsNullOrWhiteSpace(smtpPassRaw))
+        {
+            _logger.LogWarning("Servicio de correo SMTP omitido: SMTP_USER o SMTP_PASSWORD no han sido configurados.");
+            return false;
+        }
+
+        var smtpPass = smtpPassRaw.Replace(" ", ""); // Limpiar espacios de App Password de Google
+
+        var sslStr = _configuration["SMTP_ENABLE_SSL"]
+            ?? _configuration["Smtp:EnableSsl"]
+            ?? Environment.GetEnvironmentVariable("SMTP_ENABLE_SSL");
+        var enableSsl = string.IsNullOrWhiteSpace(sslStr) || !bool.TryParse(sslStr, out var ssl) || ssl;
+
+        var smtpFrom = _configuration["SMTP_FROM"]
+            ?? _configuration["Smtp:From"]
+            ?? Environment.GetEnvironmentVariable("SMTP_FROM")
+            ?? smtpUser;
+
+        _logger.LogInformation("Ejecutando entrega de correo vía SMTP ({Host}:{Port}) hacia {Destinatario}", smtpHost, smtpPort, destinatario);
 
         using var client = new SmtpClient(smtpHost, smtpPort)
         {
             UseDefaultCredentials = false,
             Credentials = new NetworkCredential(smtpUser, smtpPass),
-            EnableSsl = true,
+            EnableSsl = enableSsl,
             DeliveryMethod = SmtpDeliveryMethod.Network
         };
 
@@ -176,7 +212,7 @@ public class ResendEmailNotificationService : IEmailNotificationService
         }
 
         await client.SendMailAsync(mail, cancellationToken);
-        _logger.LogInformation("Correo entregado exitosamente mediante SMTP Fallback a {Destinatario}", destinatario);
+        _logger.LogInformation("Correo entregado exitosamente mediante SMTP a {Destinatario}", destinatario);
         return true;
     }
 }
