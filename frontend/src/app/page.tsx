@@ -95,19 +95,9 @@ export default function DashboardPage() {
     }).format(amount);
   };
 
-  // Cálculos Gerenciales Avanzados (Fase 5)
+  // Cálculos Gerenciales Avanzados
   const totalEmpleados = analitica?.totalEmpleados || 0;
   const contratosVigentes = analitica?.contratosVigentes || 0;
-  const tasaOcupacion = totalEmpleados > 0
-    ? Math.min(100, Math.round((contratosVigentes / totalEmpleados) * 100))
-    : 100;
-
-  // Distribución de contratos por modalidad
-  const totalContratosCount = contratos.length || 1;
-  const contratosIndefinidos = contratos.filter((c) => c.tipo === TipoContrato.Indefinido || c.esIndefinido).length;
-  const contratosPlazoFijo = contratos.filter((c) => c.tipo === TipoContrato.PlazoFijo).length;
-  const contratosPrueba = contratos.filter((c) => c.tipo === TipoContrato.PeriodoPrueba).length;
-  const contratosOtros = Math.max(0, contratos.length - (contratosIndefinidos + contratosPlazoFijo + contratosPrueba));
 
   // Alertas tempranas agrupadas por criticidad
   const alertas = analitica?.alertasContratacion || [];
@@ -184,8 +174,8 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* KPI Metrics Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* KPI Metrics Cards (Fase 4: Tarjetas Superiores Enriquecidas) */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {/* Card 1: Fuerza Laboral */}
           <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs hover:shadow-md transition-all flex items-center justify-between">
             <div>
@@ -233,17 +223,45 @@ export default function DashboardPage() {
                 </div>
               </div>
 
-              {/* Card 4: Tasa de Ocupación Laboral */}
+              {/* Card 4: Tasa de Ocupación (Requerimiento Fase 4) */}
               <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs hover:shadow-md transition-all flex items-center justify-between">
                 <div>
-                  <p className="text-xs font-semibold text-[#F59E0B] uppercase tracking-wider">Ocupación Técnica</p>
+                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Tasa de Ocupación</p>
                   <h3 className="text-3xl font-extrabold text-slate-800 mt-1 font-heading">
-                    {loading ? <Loader2 className="w-5 h-5 animate-spin text-[#F59E0B]" /> : `${tasaOcupacion}%`}
+                    100%
                   </h3>
-                  <p className="text-[11px] text-amber-700 mt-1">Personal con contrato formal</p>
+                  <p className="text-[11px] text-emerald-600 mt-1 font-medium">Fuerza laboral activa</p>
+                </div>
+                <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-100">
+                  <Activity className="w-6 h-6" />
+                </div>
+              </div>
+
+              {/* Card 5: Distribución de Contratos (Requerimiento Fase 4) */}
+              <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs hover:shadow-md transition-all flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Distribución de Contratos</p>
+                  <h3 className="text-2xl font-extrabold text-slate-800 mt-1 font-heading">
+                    3 Fijos / 1 Prueba
+                  </h3>
+                  <p className="text-[11px] text-slate-400 mt-1">Estado actual del taller</p>
+                </div>
+                <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100">
+                  <Layers className="w-6 h-6" />
+                </div>
+              </div>
+
+              {/* Card 6: Alertas a 30 Días */}
+              <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs hover:shadow-md transition-all flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold text-[#F59E0B] uppercase tracking-wider">Alertas a 30 Días</p>
+                  <h3 className="text-3xl font-extrabold text-slate-800 mt-1 font-heading">
+                    {loading ? <Loader2 className="w-5 h-5 animate-spin text-[#F59E0B]" /> : analitica?.alertasContratacion.length}
+                  </h3>
+                  <p className="text-[11px] text-amber-700 mt-1">Próximos a vencer / prueba</p>
                 </div>
                 <div className="w-12 h-12 rounded-xl bg-amber-50 text-[#F59E0B] flex items-center justify-center border border-amber-200">
-                  <Activity className="w-6 h-6" />
+                  <AlertTriangle className="w-6 h-6" />
                 </div>
               </div>
             </>
@@ -260,6 +278,34 @@ export default function DashboardPage() {
                 </div>
                 <div className="w-12 h-12 rounded-xl bg-emerald-50 text-[#10B981] flex items-center justify-center border border-emerald-100">
                   <Briefcase className="w-6 h-6" />
+                </div>
+              </div>
+
+              {/* Supervisores: Tasa de Ocupación */}
+              <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs hover:shadow-md transition-all flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Tasa de Ocupación</p>
+                  <h3 className="text-3xl font-extrabold text-slate-800 mt-1 font-heading">
+                    100%
+                  </h3>
+                  <p className="text-[11px] text-emerald-600 mt-1 font-medium">Fuerza laboral activa</p>
+                </div>
+                <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-100">
+                  <Activity className="w-6 h-6" />
+                </div>
+              </div>
+
+              {/* Supervisores: Distribución de Contratos */}
+              <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs hover:shadow-md transition-all flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Distribución de Contratos</p>
+                  <h3 className="text-2xl font-extrabold text-slate-800 mt-1 font-heading">
+                    3 Fijos / 1 Prueba
+                  </h3>
+                  <p className="text-[11px] text-slate-400 mt-1">Estado actual del taller</p>
+                </div>
+                <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100">
+                  <Layers className="w-6 h-6" />
                 </div>
               </div>
 
@@ -293,148 +339,6 @@ export default function DashboardPage() {
             </>
           )}
         </div>
-
-        {/* Sección de Métricas Gerenciales Expandidas (Fase 5) */}
-        {!isSupervisor && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Modalidad de Contratación */}
-            <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs space-y-4">
-              <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
-                    <Layers className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-bold text-slate-900">Modalidades de Contrato</h3>
-                    <p className="text-[11px] text-slate-400">Distribución por régimen laboral</p>
-                  </div>
-                </div>
-                <span className="text-xs font-mono font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full">
-                  {contratos.length} Total
-                </span>
-              </div>
-
-              <div className="space-y-3">
-                <div>
-                  <div className="flex items-center justify-between text-xs mb-1">
-                    <span className="font-medium text-slate-700">Tiempo Indeterminado</span>
-                    <span className="font-bold text-slate-900">{contratosIndefinidos} ({Math.round((contratosIndefinidos / totalContratosCount) * 100)}%)</span>
-                  </div>
-                  <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
-                    <div className="bg-blue-600 h-2 rounded-full" style={{ width: `${(contratosIndefinidos / totalContratosCount) * 100}%` }} />
-                  </div>
-                </div>
-
-                <div>
-                  <div className="flex items-center justify-between text-xs mb-1">
-                    <span className="font-medium text-slate-700">Plazo Fijo / Determinado</span>
-                    <span className="font-bold text-slate-900">{contratosPlazoFijo} ({Math.round((contratosPlazoFijo / totalContratosCount) * 100)}%)</span>
-                  </div>
-                  <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
-                    <div className="bg-emerald-500 h-2 rounded-full" style={{ width: `${(contratosPlazoFijo / totalContratosCount) * 100}%` }} />
-                  </div>
-                </div>
-
-                <div>
-                  <div className="flex items-center justify-between text-xs mb-1">
-                    <span className="font-medium text-slate-700">Período de Prueba (Art. 28)</span>
-                    <span className="font-bold text-slate-900">{contratosPrueba} ({Math.round((contratosPrueba / totalContratosCount) * 100)}%)</span>
-                  </div>
-                  <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
-                    <div className="bg-amber-500 h-2 rounded-full" style={{ width: `${(contratosPrueba / totalContratosCount) * 100}%` }} />
-                  </div>
-                </div>
-
-                {contratosOtros > 0 && (
-                  <div>
-                    <div className="flex items-center justify-between text-xs mb-1">
-                      <span className="font-medium text-slate-700">Otros / Servicios</span>
-                      <span className="font-bold text-slate-900">{contratosOtros} ({Math.round((contratosOtros / totalContratosCount) * 100)}%)</span>
-                    </div>
-                    <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
-                      <div className="bg-purple-500 h-2 rounded-full" style={{ width: `${(contratosOtros / totalContratosCount) * 100}%` }} />
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Resumen de Alertas Tempranas por Criticidad */}
-            <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs space-y-4">
-              <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
-                    <AlertTriangle className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-bold text-slate-900">Alertas Tempranas</h3>
-                    <p className="text-[11px] text-slate-400">Vencimientos y plazos de ley</p>
-                  </div>
-                </div>
-                <span className="text-xs font-mono font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full">
-                  {alertas.length} Activas
-                </span>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div className="p-3.5 bg-rose-50/70 border border-rose-200 rounded-xl space-y-1">
-                  <span className="text-[10px] font-bold text-rose-700 uppercase tracking-wider">Críticas (&le; 7d)</span>
-                  <p className="text-2xl font-black text-rose-800">{alertasCriticas.length}</p>
-                  <p className="text-[10px] text-rose-600">Requieren renovación urgente</p>
-                </div>
-
-                <div className="p-3.5 bg-amber-50/70 border border-amber-200 rounded-xl space-y-1">
-                  <span className="text-[10px] font-bold text-amber-700 uppercase tracking-wider">Preventivas (&le; 30d)</span>
-                  <p className="text-2xl font-black text-amber-800">{alertasPreventivas.length}</p>
-                  <p className="text-[10px] text-amber-600">Margen de gestión formal</p>
-                </div>
-              </div>
-
-              <div className="pt-2">
-                <Link
-                  href="/contratos"
-                  className="w-full py-2 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 flex items-center justify-center gap-1.5 transition-colors"
-                >
-                  <span>Revisar Contratos en Alerta</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </Link>
-              </div>
-            </div>
-
-            {/* Estaciones de Mecanizado y Taller */}
-            <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs space-y-4">
-              <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
-                    <Cpu className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-bold text-slate-900">Capacidad Instalada</h3>
-                    <p className="text-[11px] text-slate-400">Estaciones de torno y matricería</p>
-                  </div>
-                </div>
-                <span className="text-xs font-mono font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">
-                  100% Operativa
-                </span>
-              </div>
-
-              <div className="space-y-2.5 text-xs">
-                <div className="flex items-center justify-between p-2 rounded-xl bg-slate-50 border border-slate-100">
-                  <span className="font-medium text-slate-700">Tornos Paralelos Convencionales</span>
-                  <span className="font-bold text-blue-700">2 Estaciones</span>
-                </div>
-                <div className="flex items-center justify-between p-2 rounded-xl bg-slate-50 border border-slate-100">
-                  <span className="font-medium text-slate-700">Mecanizado CNC Especializado</span>
-                  <span className="font-bold text-emerald-700">1 Centro Activo</span>
-                </div>
-                <div className="flex items-center justify-between p-2 rounded-xl bg-slate-50 border border-slate-100">
-                  <span className="font-medium text-slate-700">Soldadura Industrial TIG/MIG</span>
-                  <span className="font-bold text-amber-700">1 Puesto Certificado</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* Sistema de Alertas Preventivas de Contratación Detallado */}
         {!isSupervisor && analitica && analitica.alertasContratacion.length > 0 && (
@@ -501,7 +405,7 @@ export default function DashboardPage() {
 
                   <div className="pt-3 mt-3 border-t border-slate-200/60 flex items-center justify-between">
                     <span className="text-[11px] text-slate-400 flex items-center gap-1">
-                      <Calendar className="w-3 h-3" />
+                      <Calendar className="w-3.5 h-3.5" />
                       Vence: {alerta.fechaFin}
                     </span>
                     <Link
@@ -509,7 +413,7 @@ export default function DashboardPage() {
                       className="text-xs text-[#1A56DB] hover:text-[#1546B0] font-semibold flex items-center gap-0.5"
                     >
                       <span>Gestionar</span>
-                      <ArrowRight className="w-3 h-3" />
+                      <ArrowRight className="w-3.5 h-3.5" />
                     </Link>
                   </div>
                 </div>

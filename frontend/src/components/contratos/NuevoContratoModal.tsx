@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import Modal from '@/components/Modal';
-import CustomSelect from '@/components/CustomSelect';
 import { contratosApi, empleadosApi } from '@/lib/api';
 import { EmpleadoDto, TipoContrato, ValidacionSolapamientoResponse } from '@/types';
 import { AlertTriangle, CheckCircle2, Loader2, Calendar, DollarSign, ShieldAlert, FileText, User } from 'lucide-react';
@@ -12,19 +11,6 @@ interface NuevoContratoModalProps {
   onClose: () => void;
   onSuccess: () => void;
 }
-
-const TIPOS_CONTRATO_OPCIONES = [
-  { value: TipoContrato.PlazoFijo, label: 'Plazo Fijo (Determinado)' },
-  { value: TipoContrato.Indefinido, label: 'Tiempo Indeterminado' },
-  { value: TipoContrato.PeriodoPrueba, label: 'Período de Prueba (Art. 28)' },
-  { value: TipoContrato.ServiciosProfesionales, label: 'Servicios Profesionales' },
-  { value: TipoContrato.TemporalPorObra, label: 'Temporal por Obra' },
-];
-
-const MONEDAS_OPCIONES = [
-  { value: 'NIO', label: 'Córdobas (NIO C$)' },
-  { value: 'USD', label: 'Dólares (USD $)' },
-];
 
 export default function NuevoContratoModal({ isOpen, onClose, onSuccess }: NuevoContratoModalProps) {
   const [empleados, setEmpleados] = useState<EmpleadoDto[]>([]);
@@ -128,16 +114,7 @@ export default function NuevoContratoModal({ isOpen, onClose, onSuccess }: Nuevo
     }
   };
 
-  const opcionesEmpleados = empleados.map((e) => ({
-    value: e.id,
-    label: `${e.nombreCompleto} (${e.cargo})`,
-  }));
-
-  const salarioFormateado = new Intl.NumberFormat('es-NI', {
-    style: 'currency',
-    currency: formData.salarioMoneda,
-    minimumFractionDigits: 2,
-  }).format(formData.salarioMonto || 0);
+  const salario = formData.salarioMonto;
 
   return (
     <Modal
@@ -147,7 +124,7 @@ export default function NuevoContratoModal({ isOpen, onClose, onSuccess }: Nuevo
       subtitle="Registro con validación estricta de no solapamiento temporal (RF-0005 • Ley No. 185)"
       maxWidth="xl"
     >
-      <form onSubmit={handleSubmit} className="space-y-5">
+      <form onSubmit={handleSubmit} className="space-y-6">
         {errorMessage && (
           <div className="p-3.5 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700 flex items-start gap-2.5">
             <AlertTriangle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
@@ -155,19 +132,28 @@ export default function NuevoContratoModal({ isOpen, onClose, onSuccess }: Nuevo
           </div>
         )}
 
-        {/* Sección 1: Empleado y Código */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {/* Grid Moderno: Empleado y Código de Contrato */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
           <div>
-            <CustomSelect
-              label="Colaborador / Trabajador *"
+            <label className="block text-sm font-semibold text-slate-700 mb-2">
+              Empleado / Trabajador *
+            </label>
+            <select
               value={formData.empleadoId}
               onChange={(e) => handleEmpleadoChange(Number(e.target.value))}
-              options={opcionesEmpleados}
-            />
+              required
+              className="appearance-none bg-slate-50 border border-slate-300 text-slate-900 text-sm rounded-xl focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 shadow-sm cursor-pointer"
+            >
+              {empleados.map((emp) => (
+                <option key={emp.id} value={emp.id}>
+                  {emp.nombreCompleto} ({emp.cargo})
+                </option>
+              ))}
+            </select>
           </div>
 
           <div>
-            <label className="block text-[11px] font-semibold text-slate-700 mb-1 tracking-wide">
+            <label className="block text-sm font-semibold text-slate-700 mb-2">
               Código de Contrato *
             </label>
             <input
@@ -175,16 +161,18 @@ export default function NuevoContratoModal({ isOpen, onClose, onSuccess }: Nuevo
               value={formData.codigoContrato}
               onChange={(e) => setFormData({ ...formData, codigoContrato: e.target.value })}
               required
-              className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono font-bold text-blue-700 focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 uppercase transition-colors"
+              className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm font-mono font-bold text-blue-700 focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 uppercase transition-colors"
             />
           </div>
         </div>
 
-        {/* Sección 2: Tipo de Contrato & Cargo */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {/* Grid Moderno: Tipo de Contrato & Cargo */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
           <div>
-            <CustomSelect
-              label="Tipo de Contrato Legal *"
+            <label className="block text-sm font-semibold text-slate-700 mb-2">
+              Tipo de Contrato *
+            </label>
+            <select
               value={formData.tipo}
               onChange={(e) => {
                 const tipo = Number(e.target.value);
@@ -194,12 +182,19 @@ export default function NuevoContratoModal({ isOpen, onClose, onSuccess }: Nuevo
                   esIndefinido: tipo === TipoContrato.Indefinido,
                 });
               }}
-              options={TIPOS_CONTRATO_OPCIONES}
-            />
+              required
+              className="appearance-none bg-slate-50 border border-slate-300 text-slate-900 text-sm rounded-xl focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 shadow-sm cursor-pointer"
+            >
+              <option value={TipoContrato.PlazoFijo}>Plazo Fijo (Determinado)</option>
+              <option value={TipoContrato.Indefinido}>Tiempo Indeterminado</option>
+              <option value={TipoContrato.PeriodoPrueba}>Período de Prueba (Art. 28)</option>
+              <option value={TipoContrato.ServiciosProfesionales}>Servicios Profesionales</option>
+              <option value={TipoContrato.TemporalPorObra}>Temporal por Obra</option>
+            </select>
           </div>
 
           <div>
-            <label className="block text-[11px] font-semibold text-slate-700 mb-1 tracking-wide">
+            <label className="block text-sm font-semibold text-slate-700 mb-2">
               Cargo Asignado *
             </label>
             <input
@@ -207,12 +202,12 @@ export default function NuevoContratoModal({ isOpen, onClose, onSuccess }: Nuevo
               value={formData.cargo}
               onChange={(e) => setFormData({ ...formData, cargo: e.target.value })}
               required
-              className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
+              className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
             />
           </div>
         </div>
 
-        {/* Sección 3: Período de Vigencia con Verificación en Tiempo Real */}
+        {/* Período de Vigencia con Verificación en Tiempo Real */}
         <div className="p-4 bg-blue-50/60 border border-blue-100 rounded-2xl space-y-3">
           <div className="flex items-center justify-between flex-wrap gap-2">
             <span className="text-xs font-bold text-blue-900 flex items-center gap-1.5">
@@ -236,9 +231,9 @@ export default function NuevoContratoModal({ isOpen, onClose, onSuccess }: Nuevo
             </label>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             <div>
-              <label className="block text-[11px] font-medium text-slate-600 mb-1">
+              <label className="block text-sm font-semibold text-slate-700 mb-2">
                 Fecha de Inicio *
               </label>
               <input
@@ -246,12 +241,12 @@ export default function NuevoContratoModal({ isOpen, onClose, onSuccess }: Nuevo
                 value={formData.fechaInicio}
                 onChange={(e) => setFormData({ ...formData, fechaInicio: e.target.value })}
                 required
-                className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-sm focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
               />
             </div>
 
             <div>
-              <label className="block text-[11px] font-medium text-slate-600 mb-1">
+              <label className="block text-sm font-semibold text-slate-700 mb-2">
                 Fecha de Finalización {formData.esIndefinido ? '(Indefinido)' : '*'}
               </label>
               <input
@@ -260,10 +255,10 @@ export default function NuevoContratoModal({ isOpen, onClose, onSuccess }: Nuevo
                 disabled={formData.esIndefinido}
                 onChange={(e) => setFormData({ ...formData, fechaFin: e.target.value })}
                 required={!formData.esIndefinido}
-                className={`w-full px-3 py-1.5 rounded-xl text-xs border ${
+                className={`w-full px-3 py-2 rounded-xl text-sm border ${
                   formData.esIndefinido
                     ? 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed'
-                    : 'bg-white border-slate-200 focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500'
+                    : 'bg-white border-slate-300 focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500'
                 }`}
               />
             </div>
@@ -300,10 +295,10 @@ export default function NuevoContratoModal({ isOpen, onClose, onSuccess }: Nuevo
           </div>
         </div>
 
-        {/* Sección 4: Salario y Moneda con Vista Previa Formateada */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {/* Grid Moderno: Salario Mensual y Moneda (Fase 3) */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
           <div>
-            <label className="block text-[11px] font-semibold text-slate-700 mb-1 tracking-wide">
+            <label className="block text-sm font-semibold text-slate-700 mb-2">
               Salario Mensual *
             </label>
             <div className="relative">
@@ -314,34 +309,40 @@ export default function NuevoContratoModal({ isOpen, onClose, onSuccess }: Nuevo
                 value={formData.salarioMonto}
                 onChange={(e) => setFormData({ ...formData, salarioMonto: Number(e.target.value) })}
                 required
-                className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-bold text-slate-800 transition-colors"
+                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-bold text-slate-800 transition-colors"
               />
             </div>
-            <p className="text-[11px] text-slate-500 mt-1 font-medium">
-              Valor legal: <span className="font-bold text-emerald-700">{salarioFormateado}</span>
+            {/* Formato de Valor Legal en Tiempo Real */}
+            <p className="mt-2 text-sm text-green-600 font-medium">
+              Valor legal: C$ {Number(salario || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
             </p>
           </div>
 
           <div>
-            <CustomSelect
-              label="Moneda Oficial"
+            <label className="block text-sm font-semibold text-slate-700 mb-2">
+              Moneda Oficial *
+            </label>
+            <select
               value={formData.salarioMoneda}
               onChange={(e) => setFormData({ ...formData, salarioMoneda: e.target.value })}
-              options={MONEDAS_OPCIONES}
-            />
+              className="appearance-none bg-slate-50 border border-slate-300 text-slate-900 text-sm rounded-xl focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 shadow-sm cursor-pointer"
+            >
+              <option value="NIO">Córdobas (NIO C$)</option>
+              <option value="USD">Dólares (USD $)</option>
+            </select>
           </div>
         </div>
 
-        {/* Sección 5: Cláusulas */}
+        {/* Cláusulas */}
         <div>
-          <label className="block text-[11px] font-semibold text-slate-700 mb-1 tracking-wide">
+          <label className="block text-sm font-semibold text-slate-700 mb-2">
             Cláusulas y Términos Contractuales
           </label>
           <textarea
             rows={2}
             value={formData.clausulas}
             onChange={(e) => setFormData({ ...formData, clausulas: e.target.value })}
-            className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
+            className="w-full px-3.5 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
           />
         </div>
 

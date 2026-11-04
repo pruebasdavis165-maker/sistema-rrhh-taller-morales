@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Header from '@/components/Header';
-import CustomSelect from '@/components/CustomSelect';
 import { useAuth } from '@/context/AuthContext';
 import { reclutamientoApi } from '@/lib/api';
 import { ReclutamientoDto, CandidatoDto, CrearReclutamientoRequest, CrearCandidatoRequest } from '@/types';
@@ -31,14 +30,6 @@ import {
   ArrowRight,
   AlertCircle
 } from 'lucide-react';
-
-const ESTADOS_CANDIDATO_OPCIONES = [
-  { value: 'Postulado', label: 'Postulado' },
-  { value: 'En Evaluacion', label: 'En Evaluación' },
-  { value: 'Entrevistado', label: 'Entrevistado' },
-  { value: 'Aprobado', label: 'Aprobado' },
-  { value: 'Rechazado', label: 'Rechazado' },
-];
 
 export default function ReclutamientoPage() {
   const { user, hasRole } = useAuth();
@@ -135,7 +126,6 @@ export default function ReclutamientoPage() {
     try {
       await reclutamientoApi.agregarCandidato(modalNuevoCandidato, formCandidato);
       
-      // Simular notificación de correo de confirmación al postulante
       const nombreCompleto = `${formCandidato.nombres} ${formCandidato.apellidos}`.trim();
       const correoDestino = formCandidato.correo;
       
@@ -150,7 +140,6 @@ export default function ReclutamientoPage() {
       
       await cargarVacantes();
 
-      // Disparar toast de simulación de correo
       setNotificacionEmail({
         mostrar: true,
         candidatoNombre: nombreCompleto,
@@ -207,7 +196,7 @@ export default function ReclutamientoPage() {
             </div>
             <button
               onClick={() => setNotificacionEmail(null)}
-              className="p-1 text-emerald-600 hover:text-emerald-800 rounded-lg"
+              className="p-1 text-emerald-600 hover:text-emerald-800 rounded-lg cursor-pointer"
             >
               <X className="w-4 h-4" />
             </button>
@@ -405,22 +394,28 @@ export default function ReclutamientoPage() {
                                 </div>
                               </div>
 
-                              {/* Acciones de Estado y Conexión con Empleados */}
+                              {/* Acciones de Estado (Select Nativo Estilizado - Fase 2) y Conexión con Empleados */}
                               <div className="flex items-center gap-2 self-start md:self-auto flex-wrap">
                                 {canManage && (
-                                  <div className="w-36">
-                                    <CustomSelect
+                                  <div className="w-44">
+                                    <select
                                       value={c.estado}
                                       onChange={(e) => handleCambiarEstado(c.id, e.target.value)}
-                                      options={ESTADOS_CANDIDATO_OPCIONES}
-                                    />
+                                      className="appearance-none bg-slate-50 border border-slate-300 text-slate-900 text-sm rounded-xl focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 shadow-sm cursor-pointer"
+                                    >
+                                      <option value="Postulado">Postulado</option>
+                                      <option value="En Evaluacion">En Evaluación</option>
+                                      <option value="Entrevistado">Entrevistado</option>
+                                      <option value="Aprobado">Aprobado</option>
+                                      <option value="Rechazado">Rechazado</option>
+                                    </select>
                                   </div>
                                 )}
 
                                 {estaAprobado && canManage && (
                                   <Link
                                     href={`/empleados/nuevo?nombres=${encodeURIComponent(c.nombres)}&apellidos=${encodeURIComponent(c.apellidos)}&correo=${encodeURIComponent(c.correo)}&telefono=${encodeURIComponent(c.telefono)}&direccion=${encodeURIComponent(c.direccion || '')}&cargo=${encodeURIComponent(vacanteSeleccionada.cargoSolicitado)}`}
-                                    className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow-xs transition-all cursor-pointer"
+                                    className="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow-xs transition-all cursor-pointer"
                                     title="Registrar formalmente en Directorio de Empleados"
                                   >
                                     <UserCheck className="w-3.5 h-3.5" />
@@ -458,7 +453,7 @@ export default function ReclutamientoPage() {
                     <p className="text-[11px] text-slate-400">Publicar vacante técnica de taller</p>
                   </div>
                 </div>
-                <button onClick={() => setModalNuevaVacante(false)} className="text-slate-400 hover:text-slate-600">
+                <button onClick={() => setModalNuevaVacante(false)} className="text-slate-400 hover:text-slate-600 cursor-pointer">
                   <X className="w-5 h-5" />
                 </button>
               </div>
@@ -499,7 +494,7 @@ export default function ReclutamientoPage() {
                   <button
                     type="button"
                     onClick={() => setModalNuevaVacante(false)}
-                    className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl"
+                    className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl cursor-pointer"
                   >
                     Cancelar
                   </button>
@@ -531,7 +526,7 @@ export default function ReclutamientoPage() {
                     <p className="text-[11px] text-slate-400">Registro de perfil técnico y envío de confirmación</p>
                   </div>
                 </div>
-                <button onClick={() => setModalNuevoCandidato(null)} className="text-slate-400 hover:text-slate-600">
+                <button onClick={() => setModalNuevoCandidato(null)} className="text-slate-400 hover:text-slate-600 cursor-pointer">
                   <X className="w-5 h-5" />
                 </button>
               </div>
@@ -620,7 +615,7 @@ export default function ReclutamientoPage() {
                   <button
                     type="button"
                     onClick={() => setModalNuevoCandidato(null)}
-                    className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors"
+                    className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
                   >
                     Cancelar
                   </button>

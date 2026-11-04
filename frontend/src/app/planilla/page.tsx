@@ -62,10 +62,12 @@ function PlanillaContent() {
   const { user } = useAuth();
   const isSupervisor = user?.rol === 'Supervisor';
   const router = useRouter();
-  const [mounted, setMounted] = useState(false);
+  
+  // Control estricto de montaje para evitar discrepancias de hidratación SSR
+  const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
+    setIsMounted(true);
   }, []);
 
   useEffect(() => {
@@ -157,9 +159,16 @@ function PlanillaContent() {
     );
   });
 
-  if (!mounted) return null;
+  // Pantalla de carga segura antes del renderizado de cliente
+  if (!isMounted) {
+    return (
+      <div className="flex items-center justify-center min-h-screen text-slate-300">
+        Cargando planilla...
+      </div>
+    );
+  }
 
-  // Cálculos consolidados de nómina seguros
+  // Cálculos consolidados de nómina seguros con respaldo en arreglos vacíos
   const totalPlanilla = (empleados || []).reduce(
     (acc, curr) => acc + (curr?.salarioMensual ?? curr?.salarioBase ?? 0),
     0
@@ -232,7 +241,7 @@ function PlanillaContent() {
                 <UserCheck className="w-4 h-4" />
               </div>
             </div>
-            <p className="text-xl font-bold text-slate-900">{empleados.length} Técnicos</p>
+            <p className="text-xl font-bold text-slate-900">{(empleados || []).length} Técnicos</p>
             <p className="text-[11px] text-emerald-600 font-medium">Expedientes activos de taller</p>
           </div>
 
@@ -352,7 +361,7 @@ function PlanillaContent() {
               <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
               <p className="text-xs font-medium">Cargando nómina de colaboradores...</p>
             </div>
-          ) : empleadosFiltrados.length === 0 ? (
+          ) : (empleadosFiltrados || []).length === 0 ? (
             <div className="p-12 text-center bg-slate-50/50 rounded-xl border border-dashed border-slate-200 text-slate-500 text-xs space-y-2">
               <Info className="w-6 h-6 mx-auto text-slate-400" />
               <p className="font-semibold text-slate-700">No se encontraron colaboradores en nómina</p>
@@ -386,7 +395,7 @@ function PlanillaContent() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-xs">
-                  {empleadosFiltrados.map((emp) => {
+                  {(empleadosFiltrados || []).map((emp) => {
                     const salario = emp.salarioMensual ?? emp.salarioBase ?? 0;
                     const inss = Math.round(salario * 0.07);
                     const neto = salario - inss;
