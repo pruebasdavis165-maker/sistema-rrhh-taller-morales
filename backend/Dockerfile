@@ -1,29 +1,13 @@
-# Etapa 1: Build de la solución .NET 9
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 WORKDIR /src
-
-# Copiar csproj y restaurar dependencias para aprovechar cache de Docker
-COPY ["src/TornoMorales.Domain/TornoMorales.Domain.csproj", "src/TornoMorales.Domain/"]
-COPY ["src/TornoMorales.Application/TornoMorales.Application.csproj", "src/TornoMorales.Application/"]
-COPY ["src/TornoMorales.Infrastructure/TornoMorales.Infrastructure.csproj", "src/TornoMorales.Infrastructure/"]
-COPY ["src/TornoMorales.Api/TornoMorales.Api.csproj", "src/TornoMorales.Api/"]
-
-RUN dotnet restore "src/TornoMorales.Api/TornoMorales.Api.csproj"
-
-# Copiar todo el código fuente y compilar
 COPY . .
-WORKDIR "/src/src/TornoMorales.Api"
-RUN dotnet publish "TornoMorales.Api.csproj" -c Release -o /app/publish /p:UseAppHost=false
+RUN cp -r src/* . 2>/dev/null || true
+RUN dotnet restore "TornoMorales.Api/TornoMorales.Api.csproj"
+RUN dotnet publish "TornoMorales.Api/TornoMorales.Api.csproj" -c Release -o /app/publish /p:UseAppHost=false
 
-# Etapa 2: Runtime optimizado
 FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS final
 WORKDIR /app
-EXPOSE 8080
-ENV ASPNETCORE_URLS=http://+:8080
-ENV ASPNETCORE_ENVIRONMENT=Production
-
-# Dependencias nativas de fuentes para QuestPDF en Linux
-RUN apt-get update && apt-get install -y --no-install-recommends libfontconfig1 && rm -rf /var/lib/apt/lists/*
-
+RUN apt-get update && apt-get install -y libfontconfig1 && rm -rf /var/lib/apt/lists/*
 COPY --from=build /app/publish .
+# Dejar que Railway/Plataforma asigne el puerto dinámico
 ENTRYPOINT ["dotnet", "TornoMorales.Api.dll"]
