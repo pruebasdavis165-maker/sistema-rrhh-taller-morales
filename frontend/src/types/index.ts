@@ -342,7 +342,9 @@ export interface DeduccionesDto {
   salarioBruto: number;
   inssLaboral: number;
   porcentajeInss: number;
-  irRetencion: number;
+  irRetencion?: number;
+  irMensual?: number;
+  porcentajeInssLaboral?: number;
   totalDeducciones: number;
   salarioNeto: number;
   tramosAplicados?: string;
@@ -359,6 +361,9 @@ export interface CandidatoDto {
   estado: string;
   resultado?: string | null;
   reclutamientoId: number;
+  documentoNombre?: string | null;
+  tieneDocumento?: boolean;
+  documentoTipo?: string | null;
 }
 
 export interface ReclutamientoDto {
@@ -385,5 +390,8 @@ export interface CrearCandidatoRequest {
   telefono: string;
   correo: string;
   direccion?: string;
+  documentoNombre?: string | null;
+  documentoBase64?: string | null;
+  documentoTipo?: string | null;
 }
 

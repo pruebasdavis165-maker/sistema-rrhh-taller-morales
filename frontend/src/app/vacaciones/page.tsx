@@ -73,7 +73,7 @@ function VacacionesContent() {
   const [solicitudAAprobar, setSolicitudAAprobar] = useState<SolicitudVacacionesDto | null>(null);
   const [solicitudARechazar, setSolicitudARechazar] = useState<SolicitudVacacionesDto | null>(null);
 
-  // Fetch de catálogos para filtros dinámicos (RF-0004)
+  // Fetch de catálogos para filtros dinámicos
   useEffect(() => {
     async function cargarCatalogos() {
       try {
@@ -185,7 +185,7 @@ function VacacionesContent() {
     <div className="flex-1 flex flex-col bg-slate-50 min-h-screen">
       <Header
         title="Control de Vacaciones y Descansos"
-        subtitle="Verificación y cómputo de saldo disponible previo a autorización (RF-0004)"
+        subtitle="Verificación y cómputo de saldo disponible previo a autorización"
       />
 
       <main className="p-8 max-w-7xl w-full mx-auto space-y-6">
@@ -236,7 +236,7 @@ function VacacionesContent() {
           </div>
         </div>
 
-        {/* Live Employee Balance Rediseñado Tema Claro y Profesional (RF-0004) */}
+        {/* Live Employee Balance Rediseñado Tema Claro y Profesional */}
         <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200/90 shadow-md relative overflow-hidden">
           {/* Header del Card */}
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-slate-100 relative z-10">
@@ -564,7 +564,7 @@ export default function VacacionesPage() {
         <div className="flex-1 flex flex-col bg-slate-50 min-h-screen">
           <Header
             title="Control de Vacaciones y Descansos Laborales"
-            subtitle="Cómputo en vivo según Art. 76 Ley No. 185 y gestión de descansos (RF-0004)"
+            subtitle="Cómputo en vivo según Art. 76 Ley No. 185 y gestión de descansos"
           />
           <div className="p-12 flex flex-col items-center justify-center text-slate-400 gap-3">
             <Loader2 className="w-8 h-8 animate-spin text-blue-600" />

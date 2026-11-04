@@ -20,7 +20,7 @@ const montserrat = Montserrat({
 
 export const metadata: Metadata = {
   title: 'Taller de Torno Morales López - Sistema de RRHH',
-  description: 'Sistema Integral para la Gestión de Recursos Humanos (Contratos RF-0005, Vacaciones RF-0004 y Auditoría RF-0006)',
+  description: 'Sistema Integral para la Gestión de Recursos Humanos',
 };
 
 export default function RootLayout({

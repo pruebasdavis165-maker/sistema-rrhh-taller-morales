@@ -15,6 +15,11 @@ public class Candidato : Entity<int>
     public string? Resultado { get; private set; }
     public int ReclutamientoId { get; private set; }
 
+    // Soporte para CV / Hoja de vida digital
+    public string? DocumentoNombre { get; private set; }
+    public string? DocumentoBase64 { get; private set; }
+    public string? DocumentoTipo { get; private set; }
+
     public virtual Reclutamiento? Reclutamiento { get; private set; }
 
     public string NombreCompleto => $"{Nombres} {Apellidos}";
@@ -29,7 +34,10 @@ public class Candidato : Entity<int>
         string direccion,
         int reclutamientoId,
         string estado = "Postulado",
-        string? resultado = null)
+        string? resultado = null,
+        string? documentoNombre = null,
+        string? documentoBase64 = null,
+        string? documentoTipo = null)
     {
         if (string.IsNullOrWhiteSpace(nombres))
             throw new ReglaNegocioException("Los nombres del candidato son requeridos.");
@@ -54,6 +62,9 @@ public class Candidato : Entity<int>
         ReclutamientoId = reclutamientoId;
         Estado = string.IsNullOrWhiteSpace(estado) ? "Postulado" : estado.Trim();
         Resultado = resultado?.Trim();
+        DocumentoNombre = documentoNombre?.Trim();
+        DocumentoBase64 = documentoBase64;
+        DocumentoTipo = documentoTipo?.Trim();
     }
 
     public void ActualizarEstado(string nuevoEstado, string? resultado = null)
@@ -66,6 +77,13 @@ public class Candidato : Entity<int>
         {
             Resultado = resultado.Trim();
         }
+    }
+
+    public void AsignarDocumento(string? nombre, string? base64, string? tipo)
+    {
+        DocumentoNombre = nombre?.Trim();
+        DocumentoBase64 = base64;
+        DocumentoTipo = tipo?.Trim();
     }
 
     public void ActualizarDatosContacto(string telefono, string correo, string direccion)

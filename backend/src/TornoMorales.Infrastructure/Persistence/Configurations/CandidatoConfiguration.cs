@@ -45,6 +45,18 @@ public class CandidatoConfiguration : IEntityTypeConfiguration<Candidato>
         builder.Property(c => c.ReclutamientoId)
             .IsRequired();
 
+        builder.Property(c => c.DocumentoNombre)
+            .HasMaxLength(250)
+            .IsRequired(false);
+
+        builder.Property(c => c.DocumentoBase64)
+            .HasColumnType("text")
+            .IsRequired(false);
+
+        builder.Property(c => c.DocumentoTipo)
+            .HasMaxLength(100)
+            .IsRequired(false);
+
         builder.HasOne(c => c.Reclutamiento)
             .WithMany(r => r.Candidatos)
             .HasForeignKey(c => c.ReclutamientoId)

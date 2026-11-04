@@ -136,7 +136,7 @@ function EmpleadosContent() {
     <div className="flex-1 flex flex-col bg-slate-50 min-h-screen">
       <Header
         title="Expedientes Laborales de Empleados"
-        subtitle="Registro, consulta y estado del personal del taller (RF-0001)"
+        subtitle="Registro, consulta y estado del personal del taller"
       />
 
       <main className="p-8 max-w-7xl w-full mx-auto space-y-6">
@@ -321,7 +321,7 @@ function EmpleadosContent() {
                   </div>
                   <div>
                     <h3 className="text-base font-bold text-slate-900">Registrar Nuevo Colaborador</h3>
-                    <p className="text-xs text-slate-500">Ingreso a la nómina y expediente de taller (RF-0001)</p>
+                    <p className="text-xs text-slate-500">Ingreso a la nómina y expediente de taller</p>
                   </div>
                 </div>
                 <button
@@ -623,7 +623,7 @@ export default function EmpleadosPage() {
         <div className="flex-1 flex flex-col bg-slate-50 min-h-screen">
           <Header
             title="Expedientes Laborales de Empleados"
-            subtitle="Registro, consulta y estado del personal del taller (RF-0001)"
+            subtitle="Registro, consulta y estado del personal del taller"
           />
           <div className="p-12 flex flex-col items-center justify-center text-slate-400 gap-3">
             <Loader2 className="w-8 h-8 animate-spin text-blue-600" />

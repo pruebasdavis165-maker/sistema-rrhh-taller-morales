@@ -4,7 +4,6 @@ import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Header from '@/components/Header';
 import StatusBadge from '@/components/StatusBadge';
-import CustomSelect from '@/components/CustomSelect';
 import NuevoContratoModal from '@/components/contratos/NuevoContratoModal';
 import FinalizarContratoModal from '@/components/contratos/FinalizarContratoModal';
 import { useAuth } from '@/context/AuthContext';
@@ -166,27 +165,11 @@ function ContratosContent() {
 
   const hayFiltrosActivos = Boolean(selectedEmpleadoId || selectedEstado || selectedTipo || searchTerm);
 
-  // Opciones formateadas para CustomSelect
-  const opcionesEmpleados = empleados.map((e) => ({
-    value: e.id,
-    label: e.nombreCompleto,
-  }));
-
-  const opcionesTipos = tiposContrato.map((t) => ({
-    value: t.id,
-    label: t.nombre,
-  }));
-
-  const opcionesEstados = estadosContrato.map((est) => ({
-    value: est.id,
-    label: est.nombre,
-  }));
-
   return (
     <div className="flex-1 flex flex-col bg-slate-50 min-h-screen">
       <Header
         title="Administración de Contratos Laborales"
-        subtitle="Control de vigencias y validación de no solapamiento temporal (RF-0005)"
+        subtitle="Control de vigencias y validación de no solapamiento temporal"
       />
 
       <main className="p-8 max-w-7xl w-full mx-auto space-y-6">
@@ -207,7 +190,7 @@ function ContratosContent() {
             <div>
               <p className="text-xs font-semibold text-emerald-600 uppercase tracking-wider">Vigentes Activos</p>
               <h3 className="text-2xl font-bold text-slate-800 mt-1">{vigentes}</h3>
-              <p className="text-[11px] text-slate-400 mt-0.5">Sin solapamientos (RF-0005)</p>
+              <p className="text-[11px] text-slate-400 mt-0.5">Sin solapamientos</p>
             </div>
             <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
               <CheckCircle className="w-6 h-6" />
@@ -237,7 +220,7 @@ function ContratosContent() {
           </div>
         </div>
 
-        {/* Action & Filter Bar Rediseñado con Selects Estilizados */}
+        {/* Action & Filter Bar Rediseñado con Selectores Nativos Estilizados (Fase 2) */}
         <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex flex-wrap items-center gap-3 flex-1">
             {/* Search Input */}
@@ -248,38 +231,56 @@ function ContratosContent() {
                 placeholder="Buscar código, colaborador, cargo..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-700 placeholder:text-slate-400 focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
+                className="w-full pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-900 placeholder:text-slate-400 focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
               />
             </div>
 
-            {/* Custom Select: Empleados */}
-            <div className="w-full sm:w-48">
-              <CustomSelect
+            {/* Select Nativo: Empleados */}
+            <div className="w-full sm:w-52">
+              <select
                 value={selectedEmpleadoId || ''}
                 onChange={(e) => setSelectedEmpleadoId(e.target.value ? Number(e.target.value) : undefined)}
-                options={opcionesEmpleados}
-                placeholderOption="Todos los Colaboradores"
-              />
+                className="appearance-none bg-slate-50 border border-slate-300 text-slate-900 text-sm rounded-xl focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 shadow-sm cursor-pointer"
+              >
+                <option value="">Todos los Colaboradores</option>
+                {empleados.map((emp) => (
+                  <option key={emp.id} value={emp.id}>
+                    {emp.nombreCompleto}
+                  </option>
+                ))}
+              </select>
             </div>
 
-            {/* Custom Select: Tipo de Contrato */}
-            <div className="w-full sm:w-44">
-              <CustomSelect
+            {/* Select Nativo: Tipo de Contrato */}
+            <div className="w-full sm:w-48">
+              <select
                 value={selectedTipo || ''}
                 onChange={(e) => setSelectedTipo(e.target.value ? Number(e.target.value) : undefined)}
-                options={opcionesTipos}
-                placeholderOption="Todos los Tipos"
-              />
+                className="appearance-none bg-slate-50 border border-slate-300 text-slate-900 text-sm rounded-xl focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 shadow-sm cursor-pointer"
+              >
+                <option value="">Todos los Tipos</option>
+                {tiposContrato.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.nombre}
+                  </option>
+                ))}
+              </select>
             </div>
 
-            {/* Custom Select: Estado */}
-            <div className="w-full sm:w-36">
-              <CustomSelect
+            {/* Select Nativo: Estado */}
+            <div className="w-full sm:w-40">
+              <select
                 value={selectedEstado || ''}
                 onChange={(e) => setSelectedEstado(e.target.value ? Number(e.target.value) : undefined)}
-                options={opcionesEstados}
-                placeholderOption="Todos los Estados"
-              />
+                className="appearance-none bg-slate-50 border border-slate-300 text-slate-900 text-sm rounded-xl focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 shadow-sm cursor-pointer"
+              >
+                <option value="">Todos los Estados</option>
+                {estadosContrato.map((est) => (
+                  <option key={est.id} value={est.id}>
+                    {est.nombre}
+                  </option>
+                ))}
+              </select>
             </div>
 
             {hayFiltrosActivos && (
@@ -440,7 +441,7 @@ export default function ContratosPage() {
         <div className="flex-1 flex flex-col bg-slate-50 min-h-screen">
           <Header
             title="Administración de Contratos Laborales"
-            subtitle="Control de vigencia, plazos y formalización de personal técnico (RF-0005)"
+            subtitle="Control de vigencia, plazos y formalización de personal técnico"
           />
           <div className="p-12 flex flex-col items-center justify-center text-slate-400 gap-3">
             <Loader2 className="w-8 h-8 animate-spin text-blue-600" />

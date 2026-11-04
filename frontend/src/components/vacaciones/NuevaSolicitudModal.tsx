@@ -125,7 +125,7 @@ export default function NuevaSolicitudModal({
       isOpen={isOpen}
       onClose={onClose}
       title="Registro de Solicitud de Vacaciones"
-      subtitle="Verificación obligatoria de saldo acumulado según el Código del Trabajo (RF-0004)"
+      subtitle="Verificación obligatoria de saldo acumulado según el Código del Trabajo"
       maxWidth="lg"
     >
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -155,12 +155,12 @@ export default function NuevaSolicitudModal({
           </select>
         </div>
 
-        {/* Saldo de Vacaciones Card (RF-0004 Live Feedback - Tema Claro) */}
+        {/* Saldo de Vacaciones Card */}
         <div className="p-4 bg-slate-50 border border-slate-200/90 rounded-2xl shadow-xs">
           <div className="flex items-center justify-between pb-2.5 border-b border-slate-200/80">
             <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
               <Palmtree className="w-4 h-4 text-emerald-600" />
-              Estado de Saldo en Nómina (RF-0004)
+              Estado de Saldo en Nómina
             </span>
             {saldoLoading && <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-600" />}
           </div>
@@ -258,7 +258,7 @@ export default function NuevaSolicitudModal({
           <div className="p-3.5 bg-rose-50 border border-rose-200/80 rounded-xl text-xs text-rose-800 flex items-start gap-2.5 animate-in fade-in">
             <AlertCircle className="w-4 h-4 text-rose-600 flex-shrink-0 mt-0.5" />
             <div>
-              <strong className="font-bold block text-rose-900">Saldo Insuficiente (RF-0004)</strong>
+              <strong className="font-bold block text-rose-900">Saldo Insuficiente</strong>
               <p className="mt-0.5 leading-relaxed text-[11px]">
                 Se están solicitando {formData.diasSolicitados} días, pero el saldo libre disponible del colaborador es de{' '}
                 <span className="font-bold">{saldo?.saldoDisponible.toFixed(1)} días</span>. Ajuste el período antes de registrar.

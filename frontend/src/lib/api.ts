@@ -288,6 +288,37 @@ export const reclutamientoApi = {
       method: 'PATCH',
       body: JSON.stringify({ nuevoEstado, resultado }),
     }),
+  cambiarEstadoVacante: (id: number, nuevoEstado: string) =>
+    request<ReclutamientoDto>(`/reclutamiento/${id}/estado`, {
+      method: 'PATCH',
+      body: JSON.stringify({ nuevoEstado }),
+    }),
+  eliminarVacante: (id: number) =>
+    request<void>(`/reclutamiento/${id}`, {
+      method: 'DELETE',
+    }),
+  eliminarCandidato: (candidatoId: number) =>
+    request<void>(`/reclutamiento/candidatos/${candidatoId}`, {
+      method: 'DELETE',
+    }),
+  descargarDocumentoCandidato: async (candidatoId: number, nombreDescarga: string = 'CV_Candidato.pdf') => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    const res = await fetch(`${API_BASE_URL}/reclutamiento/candidatos/${candidatoId}/documento`, {
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+    });
+    if (!res.ok) throw new Error('No se pudo descargar el documento del candidato.');
+    const blob = await res.blob();
+    const downloadUrl = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = downloadUrl;
+    link.download = nombreDescarga;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(downloadUrl);
+  },
 };
 
 export const auditoriaApi = {

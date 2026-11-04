@@ -34,23 +34,23 @@ export default function Sidebar() {
     const miExpedienteHref = user?.empleadoId ? `/empleados/${user.empleadoId}` : '/empleados';
     navigation = [
       { name: 'Mi Expediente', href: miExpedienteHref, icon: Users, tag: 'Autogestión' },
-      { name: 'Mis Vacaciones', href: '/vacaciones', icon: Palmtree, tag: 'RF-0004' },
-      { name: 'Mis Contratos', href: '/contratos', icon: FileText, tag: 'RF-0005' },
+      { name: 'Mis Vacaciones', href: '/vacaciones', icon: Palmtree },
+      { name: 'Mis Contratos', href: '/contratos', icon: FileText },
     ];
   } else {
     navigation = [
       { name: 'Dashboard', href: '/', icon: LayoutDashboard },
       { name: 'Nómina y Planilla', href: '/planilla', icon: Banknote, tag: 'Ley 185' },
       ...(!isSupervisor
-        ? [{ name: 'Reclutamiento', href: '/reclutamiento', icon: Briefcase, tag: 'RF-0008' }]
+        ? [{ name: 'Reclutamiento', href: '/reclutamiento', icon: Briefcase }]
         : []),
       ...(!isSupervisor
-        ? [{ name: 'Gestión de Contratos', href: '/contratos', icon: FileText, tag: 'RF-0005' }]
+        ? [{ name: 'Gestión de Contratos', href: '/contratos', icon: FileText }]
         : []),
-      { name: 'Gestión de Vacaciones', href: '/vacaciones', icon: Palmtree, tag: 'RF-0004' },
-      { name: 'Expedientes Laborales', href: '/empleados', icon: Users, tag: 'RF-0001' },
+      { name: 'Gestión de Vacaciones', href: '/vacaciones', icon: Palmtree },
+      { name: 'Expedientes Laborales', href: '/empleados', icon: Users },
       ...(!isSupervisor
-        ? [{ name: 'Trazabilidad y Auditoría', href: '/auditoria', icon: ShieldCheck, tag: 'RF-0006' }]
+        ? [{ name: 'Trazabilidad y Auditoría', href: '/auditoria', icon: ShieldCheck }]
         : []),
     ];
 
@@ -60,7 +60,6 @@ export default function Sidebar() {
         name: 'Gestión de Usuarios',
         href: '/usuarios',
         icon: UserCog,
-        tag: 'Seguridad',
       });
     }
   }
