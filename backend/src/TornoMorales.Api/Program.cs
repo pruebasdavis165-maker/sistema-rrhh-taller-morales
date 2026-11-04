@@ -106,8 +106,10 @@ builder.Services.AddScoped<INotificacionRealTimeService, SignalRNotificacionReal
 // Generador de tokens JWT
 builder.Services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
 
-// Clave secreta gestionada estrictamente mediante variables de entorno (Jwt__SecretKey)
-var jwtKey = Environment.GetEnvironmentVariable("Jwt__SecretKey")
+// Clave secreta gestionada estrictamente mediante variables de entorno (JWT_SECRET_KEY / Jwt__SecretKey)
+var jwtKey = builder.Configuration["JWT_SECRET_KEY"]
+    ?? Environment.GetEnvironmentVariable("JWT_SECRET_KEY")
+    ?? Environment.GetEnvironmentVariable("Jwt__SecretKey")
     ?? builder.Configuration["Jwt:SecretKey"]
     ?? builder.Configuration["Jwt:Key"]
     ?? "TornoMorales_SecretKey_RRHH_Nicaragua_2026_AdvancedEnterpriseSecurityKey!";
@@ -179,14 +181,6 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-// Migraciones automáticas + Seed
-using (var scope = app.Services.CreateScope())
-{
-    var dbContext = scope.ServiceProvider.GetRequiredService<TornoDbContext>();
-    await dbContext.Database.MigrateAsync();
-    await DbInitializer.SeedAsync(dbContext);
-}
-
 // Middleware de manejo global de errores
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 
@@ -206,5 +200,13 @@ app.MapControllers();
 
 // Mapeo del Hub de SignalR para notificaciones en tiempo real
 app.MapHub<NotificacionesHub>("/hubs/notificaciones");
+
+// ── Migraciones Automáticas de Entity Framework al Arrancar (Railway / Docker) ──
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<TornoDbContext>();
+    db.Database.Migrate();
+    DbInitializer.SeedAsync(db).GetAwaiter().GetResult();
+}
 
 app.Run();
