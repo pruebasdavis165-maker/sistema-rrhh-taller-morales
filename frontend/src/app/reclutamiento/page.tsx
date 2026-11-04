@@ -12,29 +12,35 @@ import {
   UserPlus, 
   Plus, 
   Users, 
-  Clock, 
-  CheckCircle2, 
-  XCircle, 
   Loader2, 
   X, 
   Search,
-  Phone,
-  Mail,
-  MapPin,
-  ChevronRight,
-  Filter,
-  CheckCircle,
-  UserCheck,
-  Send,
-  Sparkles,
-  ArrowRight,
-  AlertCircle
+  Phone, 
+  Mail, 
+  MapPin, 
+  ChevronRight, 
+  CheckCircle, 
+  UserCheck, 
+  Send, 
+  Sparkles, 
+  AlertCircle,
+  Clock,
+  CheckCircle2,
+  XCircle,
+  Building2,
+  Calendar
 } from 'lucide-react';
 
 export default function ReclutamientoPage() {
   const { user, hasRole } = useAuth();
   const canManage = hasRole(['Administrador', 'RRHH']);
   const router = useRouter();
+
+  // Control estricto de hidratación
+  const [isMounted, setIsMounted] = useState(false);
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   useEffect(() => {
     if (user?.rol === 'Empleado') {
@@ -54,14 +60,14 @@ export default function ReclutamientoPage() {
   const [guardando, setGuardando] = useState(false);
   const [errorForm, setErrorForm] = useState<string | null>(null);
 
-  // Simulación de envío de correo de confirmación
+  // Simulación de confirmación por correo electrónico
   const [notificacionEmail, setNotificacionEmail] = useState<{
     mostrar: boolean;
     candidatoNombre: string;
     correo: string;
   } | null>(null);
 
-  // Datos de formularios
+  // Formularios
   const [formVacante, setFormVacante] = useState<CrearReclutamientoRequest>({
     cargoSolicitado: 'Operario Especialista en Torno CNC',
     descripcion: 'Técnico tornero con experiencia en rectificado de piezas automotrices e industriales de alta precisión.',
@@ -82,7 +88,7 @@ export default function ReclutamientoPage() {
       if (data && data.length > 0 && !vacanteSeleccionada) {
         setVacanteSeleccionada(data[0]);
       } else if (vacanteSeleccionada) {
-        const updated = data.find((v) => v.id === vacanteSeleccionada.id);
+        const updated = (data || []).find((v) => v.id === vacanteSeleccionada.id);
         if (updated) setVacanteSeleccionada(updated);
       }
     } catch (err) {
@@ -166,6 +172,14 @@ export default function ReclutamientoPage() {
     }
   };
 
+  if (!isMounted) {
+    return (
+      <div className="flex items-center justify-center min-h-screen text-slate-400">
+        Cargando módulo de reclutamiento...
+      </div>
+    );
+  }
+
   const totalCandidatos = (vacantes || []).reduce((acc, curr) => acc + (curr?.totalCandidatos || 0), 0);
 
   return (
@@ -181,14 +195,14 @@ export default function ReclutamientoPage() {
           <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-900 rounded-2xl flex items-center justify-between shadow-xs animate-in fade-in slide-in-from-top-3">
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
-                <Send className="w-4 h-4" />
+                <Send className="w-5 h-5" />
               </div>
               <div>
                 <p className="text-xs font-bold text-emerald-900">
                   ¡Postulación Registrada y Notificación Enviada!
                 </p>
                 <p className="text-[11px] text-emerald-700 mt-0.5">
-                  Se ha remitido un acuse de recibo de postulación laboral a{' '}
+                  Se ha remitido un acuse de recibo formal a{' '}
                   <span className="font-semibold underline">{notificacionEmail.correo}</span> para{' '}
                   <span className="font-semibold">{notificacionEmail.candidatoNombre}</span>.
                 </p>
@@ -203,12 +217,12 @@ export default function ReclutamientoPage() {
           </div>
         )}
 
-        {/* KPI Summary */}
+        {/* KPI Summary Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center justify-between">
             <div>
               <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Vacantes Publicadas</p>
-              <p className="text-2xl font-bold text-slate-900 mt-1">{vacantes.length}</p>
+              <p className="text-2xl font-bold text-slate-900 mt-1">{(vacantes || []).length}</p>
             </div>
             <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
               <Briefcase className="w-5 h-5" />
@@ -246,7 +260,7 @@ export default function ReclutamientoPage() {
           {canManage && (
             <button
               onClick={() => setModalNuevaVacante(true)}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-xl shadow-xs hover:shadow transition-all flex items-center gap-2 cursor-pointer self-start sm:self-auto"
+              className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-xl shadow-xs hover:shadow transition-all flex items-center gap-2 cursor-pointer self-start sm:self-auto"
             >
               <Plus className="w-4 h-4" />
               <span>Nueva Vacante de Taller</span>
@@ -259,7 +273,7 @@ export default function ReclutamientoPage() {
             <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
             <p className="text-xs">Cargando vacantes de reclutamiento...</p>
           </div>
-        ) : vacantes.length === 0 ? (
+        ) : (vacantes || []).length === 0 ? (
           <div className="bg-white p-12 rounded-2xl border border-slate-200/80 text-center space-y-4">
             <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mx-auto text-slate-400">
               <Briefcase className="w-6 h-6" />
@@ -271,7 +285,7 @@ export default function ReclutamientoPage() {
             {canManage && (
               <button
                 onClick={() => setModalNuevaVacante(true)}
-                className="px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer"
+                className="px-4 py-2.5 bg-blue-600 text-white rounded-xl text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer shadow-xs"
               >
                 <Plus className="w-4 h-4" />
                 <span>Publicar Primera Vacante</span>
@@ -283,7 +297,7 @@ export default function ReclutamientoPage() {
             {/* Lista Lateral de Vacantes */}
             <div className="space-y-3">
               <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider">Convocatorias Disponibles</h4>
-              {vacantes.map((v) => {
+              {(vacantes || []).map((v) => {
                 const seleccionada = vacanteSeleccionada?.id === v.id;
                 return (
                   <div
@@ -313,7 +327,7 @@ export default function ReclutamientoPage() {
               })}
             </div>
 
-            {/* Panel Principal: Detalle de Vacante y Candidatos */}
+            {/* Panel Principal: Detalle de Vacante y Candidatos Evaluados */}
             <div className="lg:col-span-2 space-y-4">
               {vacanteSeleccionada ? (
                 <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-6 space-y-6">
@@ -331,7 +345,7 @@ export default function ReclutamientoPage() {
                     {canManage && (
                       <button
                         onClick={() => setModalNuevoCandidato(vacanteSeleccionada.id)}
-                        className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow-xs cursor-pointer shrink-0"
+                        className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold flex items-center gap-2 shadow-xs cursor-pointer shrink-0"
                       >
                         <UserPlus className="w-4 h-4" />
                         <span>Postular Candidato</span>
@@ -339,63 +353,75 @@ export default function ReclutamientoPage() {
                     )}
                   </div>
 
-                  {/* Listado de Candidatos Postulados */}
-                  <div className="space-y-3">
+                  {/* Listado de Candidatos Evaluados */}
+                  <div className="space-y-4">
                     <div className="flex items-center justify-between">
                       <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-                        Candidatos Evaluados ({vacanteSeleccionada.candidatos?.length || 0})
+                        Candidatos Evaluados ({(vacanteSeleccionada.candidatos || []).length})
                       </h4>
                     </div>
 
-                    {vacanteSeleccionada.candidatos?.length === 0 ? (
+                    {(vacanteSeleccionada.candidatos || []).length === 0 ? (
                       <div className="p-8 text-center bg-slate-50/50 rounded-2xl border border-dashed border-slate-200 text-xs text-slate-500">
                         Aún no hay candidatos postulados para este puesto. Utilice "Postular Candidato" para registrar el perfil técnico de un interesado.
                       </div>
                     ) : (
-                      <div className="divide-y divide-slate-100">
-                        {vacanteSeleccionada.candidatos.map((c) => {
+                      <div className="space-y-3">
+                        {(vacanteSeleccionada.candidatos || []).map((c) => {
                           const estaAprobado = c.estado === 'Aprobado';
                           return (
-                            <div key={c.id} className="py-4 flex flex-col md:flex-row md:items-center justify-between gap-3">
-                              <div className="space-y-1.5">
-                                <div className="flex items-center gap-2 flex-wrap">
-                                  <span className="text-xs font-bold text-slate-900">{c.nombreCompleto}</span>
-                                  <span className={`text-[10px] font-semibold px-2.5 py-0.5 rounded-full ${
-                                    c.estado === 'Aprobado' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
-                                    c.estado === 'Rechazado' ? 'bg-rose-50 text-rose-700 border border-rose-200' :
-                                    c.estado === 'Entrevistado' ? 'bg-purple-50 text-purple-700 border border-purple-200' :
-                                    c.estado === 'En Evaluacion' ? 'bg-amber-50 text-amber-700 border border-amber-200' :
-                                    'bg-blue-50 text-blue-700 border border-blue-200'
-                                  }`}>
-                                    {c.estado}
-                                  </span>
-                                  {estaAprobado && (
-                                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700 bg-emerald-100/70 px-2 py-0.5 rounded-full">
-                                      <Sparkles className="w-3 h-3 text-emerald-600" />
-                                      Listo para Expediente
-                                    </span>
-                                  )}
+                            <div 
+                              key={c.id} 
+                              className={`p-4 rounded-2xl border transition-all flex flex-col md:flex-row md:items-center justify-between gap-4 ${
+                                estaAprobado 
+                                  ? 'bg-emerald-50/40 border-emerald-200 shadow-xs' 
+                                  : 'bg-white border-slate-200/80 hover:border-slate-300 shadow-2xs'
+                              }`}
+                            >
+                              <div className="flex items-start gap-3.5">
+                                <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-700 font-bold flex items-center justify-center shrink-0 text-sm shadow-2xs">
+                                  {(c.nombres || 'C').charAt(0)}{(c.apellidos || '').charAt(0)}
                                 </div>
-                                <div className="flex flex-wrap items-center gap-4 text-xs text-slate-500">
-                                  <span className="flex items-center gap-1">
-                                    <Phone className="w-3 h-3 text-slate-400" />
-                                    {c.telefono}
-                                  </span>
-                                  <span className="flex items-center gap-1">
-                                    <Mail className="w-3 h-3 text-slate-400" />
-                                    {c.correo}
-                                  </span>
-                                  {c.direccion && (
-                                    <span className="flex items-center gap-1 text-[11px] text-slate-400">
-                                      <MapPin className="w-3 h-3" />
-                                      {c.direccion}
+                                <div className="space-y-1.5">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <span className="text-sm font-bold text-slate-900">{c.nombreCompleto}</span>
+                                    <span className={`text-[10px] font-semibold px-2.5 py-0.5 rounded-full ${
+                                      c.estado === 'Aprobado' ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' :
+                                      c.estado === 'Rechazado' ? 'bg-rose-50 text-rose-700 border border-rose-200' :
+                                      c.estado === 'Entrevistado' ? 'bg-purple-50 text-purple-700 border border-purple-200' :
+                                      c.estado === 'En Evaluacion' ? 'bg-amber-50 text-amber-700 border border-amber-200' :
+                                      'bg-blue-50 text-blue-700 border border-blue-200'
+                                    }`}>
+                                      {c.estado}
                                     </span>
-                                  )}
+                                    {estaAprobado && (
+                                      <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-800 bg-emerald-100 px-2.5 py-0.5 rounded-full border border-emerald-300">
+                                        <Sparkles className="w-3 h-3 text-emerald-600" />
+                                        Listo para Expediente
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="flex flex-wrap items-center gap-3.5 text-xs text-slate-500">
+                                    <span className="flex items-center gap-1 bg-slate-50 px-2 py-0.5 rounded-md border border-slate-200/60">
+                                      <Phone className="w-3 h-3 text-slate-400" />
+                                      {c.telefono}
+                                    </span>
+                                    <span className="flex items-center gap-1 bg-slate-50 px-2 py-0.5 rounded-md border border-slate-200/60">
+                                      <Mail className="w-3 h-3 text-slate-400" />
+                                      {c.correo}
+                                    </span>
+                                    {c.direccion && (
+                                      <span className="flex items-center gap-1 text-[11px] text-slate-400">
+                                        <MapPin className="w-3 h-3" />
+                                        {c.direccion}
+                                      </span>
+                                    )}
+                                  </div>
                                 </div>
                               </div>
 
-                              {/* Acciones de Estado (Select Nativo Estilizado - Fase 2) y Conexión con Empleados */}
-                              <div className="flex items-center gap-2 self-start md:self-auto flex-wrap">
+                              {/* Acciones de Estado y Conexión Directa con Directorio de Empleados */}
+                              <div className="flex items-center gap-2.5 self-start md:self-auto flex-wrap">
                                 {canManage && (
                                   <div className="w-44">
                                     <select
@@ -415,10 +441,10 @@ export default function ReclutamientoPage() {
                                 {estaAprobado && canManage && (
                                   <Link
                                     href={`/empleados/nuevo?nombres=${encodeURIComponent(c.nombres)}&apellidos=${encodeURIComponent(c.apellidos)}&correo=${encodeURIComponent(c.correo)}&telefono=${encodeURIComponent(c.telefono)}&direccion=${encodeURIComponent(c.direccion || '')}&cargo=${encodeURIComponent(vacanteSeleccionada.cargoSolicitado)}`}
-                                    className="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow-xs transition-all cursor-pointer"
+                                    className="px-3.5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow-xs transition-all cursor-pointer hover:shadow"
                                     title="Registrar formalmente en Directorio de Empleados"
                                   >
-                                    <UserCheck className="w-3.5 h-3.5" />
+                                    <UserCheck className="w-4 h-4" />
                                     <span>Contratar Empleado</span>
                                   </Link>
                                 )}
@@ -439,21 +465,21 @@ export default function ReclutamientoPage() {
           </div>
         )}
 
-        {/* Modal Nueva Vacante */}
+        {/* Modal Nueva Vacante con Jerarquía Visual Mejorada */}
         {modalNuevaVacante && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-            <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl border border-slate-200/80 space-y-4 animate-in fade-in zoom-in-95">
+            <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-xl border border-slate-200/80 space-y-5 animate-in fade-in zoom-in-95">
               <div className="flex items-start justify-between pb-3 border-b border-slate-100">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center">
-                    <Briefcase className="w-4 h-4" />
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center">
+                    <Briefcase className="w-5 h-5" />
                   </div>
                   <div>
-                    <h3 className="text-sm font-bold text-slate-900">Nueva Convocatoria de Reclutamiento</h3>
-                    <p className="text-[11px] text-slate-400">Publicar vacante técnica de taller</p>
+                    <h3 className="text-base font-bold text-slate-900">Nueva Convocatoria de Reclutamiento</h3>
+                    <p className="text-xs text-slate-400">Publicar vacante técnica para el Taller Morales López</p>
                   </div>
                 </div>
-                <button onClick={() => setModalNuevaVacante(false)} className="text-slate-400 hover:text-slate-600 cursor-pointer">
+                <button onClick={() => setModalNuevaVacante(false)} className="text-slate-400 hover:text-slate-600 cursor-pointer p-1">
                   <X className="w-5 h-5" />
                 </button>
               </div>
@@ -465,43 +491,47 @@ export default function ReclutamientoPage() {
                 </div>
               )}
 
-              <form onSubmit={handleCrearVacante} className="space-y-3">
+              <form onSubmit={handleCrearVacante} className="space-y-4">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Cargo / Puesto Solicitado *</label>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">
+                    Cargo / Puesto Solicitado *
+                  </label>
                   <input
                     type="text"
                     required
                     placeholder="Ej. Operario de Torno Especializado CNC"
                     value={formVacante.cargoSolicitado}
                     onChange={(e) => setFormVacante({ ...formVacante, cargoSolicitado: e.target.value })}
-                    className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
+                    className="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-300 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Descripción y Requisitos *</label>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">
+                    Descripción y Requisitos *
+                  </label>
                   <textarea
                     rows={3}
                     required
-                    placeholder="Detalle de experiencia en soldadura, tolerancias milimétricas o matricería..."
+                    placeholder="Detalle de experiencia requerida en torno, CNC, fresa, soldadura o ajustes..."
                     value={formVacante.descripcion}
                     onChange={(e) => setFormVacante({ ...formVacante, descripcion: e.target.value })}
-                    className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
+                    className="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-300 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
                   />
                 </div>
 
-                <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
+                <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2.5">
                   <button
                     type="button"
                     onClick={() => setModalNuevaVacante(false)}
-                    className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl cursor-pointer"
+                    className="px-4 py-2.5 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl cursor-pointer transition-colors"
                   >
                     Cancelar
                   </button>
                   <button
                     type="submit"
                     disabled={guardando}
-                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-xl flex items-center gap-1.5 disabled:opacity-50 cursor-pointer shadow-xs"
+                    className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-xl flex items-center gap-2 disabled:opacity-50 cursor-pointer shadow-xs"
                   >
                     {guardando && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
                     <span>Publicar Vacante</span>
@@ -512,32 +542,32 @@ export default function ReclutamientoPage() {
           </div>
         )}
 
-        {/* Modal Registrar Candidato con Simulación de Correo Electrónico */}
+        {/* Modal Postular Candidato con Jerarquía Visual Rediseñada (Fase 3) */}
         {modalNuevoCandidato && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-            <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl border border-slate-200/80 space-y-4 animate-in fade-in zoom-in-95">
+            <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-xl border border-slate-200/80 space-y-5 animate-in fade-in zoom-in-95">
               <div className="flex items-start justify-between pb-3 border-b border-slate-100">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center">
-                    <UserPlus className="w-4 h-4" />
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center">
+                    <UserPlus className="w-5 h-5" />
                   </div>
                   <div>
-                    <h3 className="text-sm font-bold text-slate-900">Postular Candidato a Vacante</h3>
-                    <p className="text-[11px] text-slate-400">Registro de perfil técnico y envío de confirmación</p>
+                    <h3 className="text-base font-bold text-slate-900">Postular Candidato a Vacante</h3>
+                    <p className="text-xs text-slate-400">Registro de perfil técnico y envío de confirmación</p>
                   </div>
                 </div>
-                <button onClick={() => setModalNuevoCandidato(null)} className="text-slate-400 hover:text-slate-600 cursor-pointer">
+                <button onClick={() => setModalNuevoCandidato(null)} className="text-slate-400 hover:text-slate-600 cursor-pointer p-1">
                   <X className="w-5 h-5" />
                 </button>
               </div>
 
               {/* Aviso Informativo del Envío de Correo */}
-              <div className="p-3 bg-blue-50/80 border border-blue-200 text-blue-900 rounded-xl text-xs flex items-start gap-2.5">
+              <div className="p-3.5 bg-blue-50/80 border border-blue-200 text-blue-900 rounded-xl text-xs flex items-start gap-2.5">
                 <Send className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
                 <div>
-                  <span className="font-semibold block">Confirmación Automática al Postulante</span>
+                  <span className="font-semibold block text-blue-900">Confirmación Automática al Postulante</span>
                   <p className="text-[11px] text-blue-700 mt-0.5">
-                    Al completar este registro, el sistema enviará un correo formal de confirmación con los datos de la convocatoria.
+                    Al completar este registro, el sistema simulará el despacho inmediato de la confirmación formal al postulante.
                   </p>
                 </div>
               </div>
@@ -549,80 +579,90 @@ export default function ReclutamientoPage() {
                 </div>
               )}
 
-              <form onSubmit={handleRegistrarCandidato} className="space-y-3">
-                <div className="grid grid-cols-2 gap-2">
+              <form onSubmit={handleRegistrarCandidato} className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">Nombres *</label>
+                    <label className="block text-sm font-semibold text-slate-700 mb-2">
+                      Nombres *
+                    </label>
                     <input
                       type="text"
                       required
                       placeholder="Ej. José Manuel"
                       value={formCandidato.nombres}
                       onChange={(e) => setFormCandidato({ ...formCandidato, nombres: e.target.value })}
-                      className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
+                      className="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-300 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors placeholder:text-slate-400"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">Apellidos *</label>
+                    <label className="block text-sm font-semibold text-slate-700 mb-2">
+                      Apellidos *
+                    </label>
                     <input
                       type="text"
                       required
                       placeholder="Ej. Urbina Blandón"
                       value={formCandidato.apellidos}
                       onChange={(e) => setFormCandidato({ ...formCandidato, apellidos: e.target.value })}
-                      className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
+                      className="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-300 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors placeholder:text-slate-400"
                     />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">Teléfono Móvil *</label>
+                    <label className="block text-sm font-semibold text-slate-700 mb-2">
+                      Teléfono Móvil *
+                    </label>
                     <input
                       type="text"
                       required
                       placeholder="+505 8822-1133"
                       value={formCandidato.telefono}
                       onChange={(e) => setFormCandidato({ ...formCandidato, telefono: e.target.value })}
-                      className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
+                      className="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-300 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors placeholder:text-slate-400"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">Correo Electrónico *</label>
+                    <label className="block text-sm font-semibold text-slate-700 mb-2">
+                      Correo Electrónico *
+                    </label>
                     <input
                       type="email"
                       required
                       placeholder="jose.urbina@email.com"
                       value={formCandidato.correo}
                       onChange={(e) => setFormCandidato({ ...formCandidato, correo: e.target.value })}
-                      className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
+                      className="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-300 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors placeholder:text-slate-400"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Dirección Domiciliar</label>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">
+                    Dirección Domiciliar
+                  </label>
                   <input
                     type="text"
                     placeholder="Managua, Nicaragua"
                     value={formCandidato.direccion}
                     onChange={(e) => setFormCandidato({ ...formCandidato, direccion: e.target.value })}
-                    className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
+                    className="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-300 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors placeholder:text-slate-400"
                   />
                 </div>
 
-                <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
+                <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2.5">
                   <button
                     type="button"
                     onClick={() => setModalNuevoCandidato(null)}
-                    className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
+                    className="px-4 py-2.5 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
                   >
                     Cancelar
                   </button>
                   <button
                     type="submit"
                     disabled={guardando}
-                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-xl flex items-center gap-1.5 disabled:opacity-50 cursor-pointer shadow-xs"
+                    className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-xl flex items-center gap-2 disabled:opacity-50 cursor-pointer shadow-xs"
                   >
                     {guardando && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
                     <span>Registrar Postulación</span>
