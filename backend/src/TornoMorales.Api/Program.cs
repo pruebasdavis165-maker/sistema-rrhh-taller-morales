@@ -167,14 +167,31 @@ builder.Services.AddAuthentication(options =>
 
 builder.Services.AddAuthorization();
 
-// CORS para Next.js con soporte explícito de cookies y credenciales
+// ── CORS con soporte estricto de credenciales, métodos y orígenes de producción y desarrollo ──
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
     {
-        policy.WithOrigins("http://localhost:3000", "http://127.0.0.1:3000")
-              .AllowAnyHeader()
+        policy.WithOrigins(
+                "https://frontend-production-5d29.up.railway.app",
+                "http://localhost:3000",
+                "http://127.0.0.1:3000"
+              )
+              .SetIsOriginAllowed(origin =>
+              {
+                  if (string.IsNullOrEmpty(origin)) return false;
+                  try
+                  {
+                      var host = new Uri(origin).Host;
+                      return host == "localhost" || host == "127.0.0.1" || host.EndsWith("up.railway.app") || host.EndsWith("railway.app");
+                  }
+                  catch
+                  {
+                      return false;
+                  }
+              })
               .AllowAnyMethod()
+              .AllowAnyHeader()
               .AllowCredentials();
     });
 });
