@@ -4,6 +4,7 @@ import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Header from '@/components/Header';
 import StatusBadge from '@/components/StatusBadge';
+import CustomSelect from '@/components/CustomSelect';
 import NuevoContratoModal from '@/components/contratos/NuevoContratoModal';
 import FinalizarContratoModal from '@/components/contratos/FinalizarContratoModal';
 import { useAuth } from '@/context/AuthContext';
@@ -22,6 +23,8 @@ import {
   User,
   Loader2,
   FilterX,
+  ExternalLink,
+  Briefcase
 } from 'lucide-react';
 
 function ContratosContent() {
@@ -78,7 +81,7 @@ function ContratosContent() {
           <div className="pt-2">
             <Link
               href="/"
-              className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-semibold shadow-sm transition-colors"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-semibold shadow-xs transition-colors"
             >
               Volver al Panel Principal
             </Link>
@@ -92,15 +95,12 @@ function ContratosContent() {
   useEffect(() => {
     async function cargarCatalogos() {
       try {
-        // Carga dinámica de empleados desde endpoint existente /api/empleados
         const resEmpleados = await empleadosApi.listar();
         setEmpleados(resEmpleados || []);
       } catch (err) {
         console.error('Error al cargar empleados para filtro', err);
       }
 
-      // Catálogo de tipos de contrato
-      // TODO: Si en el futuro se crea el endpoint /api/catalogos/tipos-contrato en .NET, reemplazar este fallback
       setTiposContrato([
         { id: TipoContrato.Indefinido, nombre: 'Tiempo Indefinido' },
         { id: TipoContrato.PlazoFijo, nombre: 'Plazo Fijo / Determinado' },
@@ -109,8 +109,6 @@ function ContratosContent() {
         { id: TipoContrato.TemporalPorObra, nombre: 'Temporal por Obra' },
       ]);
 
-      // Catálogo de estados de contrato
-      // TODO: Si en el futuro se crea el endpoint /api/catalogos/estados-contrato en .NET, reemplazar este fallback
       setEstadosContrato([
         { id: EstadoContrato.Vigente, nombre: 'Vigente' },
         { id: EstadoContrato.Finalizado, nombre: 'Finalizado' },
@@ -168,6 +166,22 @@ function ContratosContent() {
 
   const hayFiltrosActivos = Boolean(selectedEmpleadoId || selectedEstado || selectedTipo || searchTerm);
 
+  // Opciones formateadas para CustomSelect
+  const opcionesEmpleados = empleados.map((e) => ({
+    value: e.id,
+    label: e.nombreCompleto,
+  }));
+
+  const opcionesTipos = tiposContrato.map((t) => ({
+    value: t.id,
+    label: t.nombre,
+  }));
+
+  const opcionesEstados = estadosContrato.map((est) => ({
+    value: est.id,
+    label: est.nombre,
+  }));
+
   return (
     <div className="flex-1 flex flex-col bg-slate-50 min-h-screen">
       <Header
@@ -223,68 +237,56 @@ function ContratosContent() {
           </div>
         </div>
 
-        {/* Action & Filter Bar Avanzado */}
-        <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+        {/* Action & Filter Bar Rediseñado con Selects Estilizados */}
+        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex flex-wrap items-center gap-3 flex-1">
-            {/* Search Input Rápido */}
-            <div className="relative flex-1 min-w-[240px]">
+            {/* Search Input */}
+            <div className="relative flex-1 min-w-[220px]">
               <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
                 type="text"
-                placeholder="Buscar por código, empleado, cargo o cédula..."
+                placeholder="Buscar código, colaborador, cargo..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-9 pr-4 py-2 bg-slate-50/80 hover:bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-700 placeholder:text-slate-400 focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
+                className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-700 placeholder:text-slate-400 focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
               />
             </div>
 
-            {/* Filter by Empleado */}
-            <select
-              value={selectedEmpleadoId || ''}
-              onChange={(e) => setSelectedEmpleadoId(e.target.value ? Number(e.target.value) : undefined)}
-              className="px-3 py-2 bg-slate-50/80 hover:bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-700 focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
-            >
-              <option value="">Todos los Empleados</option>
-              {empleados.map((emp) => (
-                <option key={emp.id} value={emp.id}>
-                  {emp.nombreCompleto}
-                </option>
-              ))}
-            </select>
+            {/* Custom Select: Empleados */}
+            <div className="w-full sm:w-48">
+              <CustomSelect
+                value={selectedEmpleadoId || ''}
+                onChange={(e) => setSelectedEmpleadoId(e.target.value ? Number(e.target.value) : undefined)}
+                options={opcionesEmpleados}
+                placeholderOption="Todos los Colaboradores"
+              />
+            </div>
 
-            {/* Filter by Tipo de Contrato */}
-            <select
-              value={selectedTipo || ''}
-              onChange={(e) => setSelectedTipo(e.target.value ? Number(e.target.value) : undefined)}
-              className="px-3 py-2 bg-slate-50/80 hover:bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-700 focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
-            >
-              <option value="">Todos los Tipos</option>
-              {tiposContrato.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.nombre}
-                </option>
-              ))}
-            </select>
+            {/* Custom Select: Tipo de Contrato */}
+            <div className="w-full sm:w-44">
+              <CustomSelect
+                value={selectedTipo || ''}
+                onChange={(e) => setSelectedTipo(e.target.value ? Number(e.target.value) : undefined)}
+                options={opcionesTipos}
+                placeholderOption="Todos los Tipos"
+              />
+            </div>
 
-            {/* Filter by Estado */}
-            <select
-              value={selectedEstado || ''}
-              onChange={(e) => setSelectedEstado(e.target.value ? Number(e.target.value) : undefined)}
-              className="px-3 py-2 bg-slate-50/80 hover:bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-700 focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
-            >
-              <option value="">Todos los Estados</option>
-              {estadosContrato.map((est) => (
-                <option key={est.id} value={est.id}>
-                  {est.nombre}
-                </option>
-              ))}
-            </select>
+            {/* Custom Select: Estado */}
+            <div className="w-full sm:w-36">
+              <CustomSelect
+                value={selectedEstado || ''}
+                onChange={(e) => setSelectedEstado(e.target.value ? Number(e.target.value) : undefined)}
+                options={opcionesEstados}
+                placeholderOption="Todos los Estados"
+              />
+            </div>
 
             {hayFiltrosActivos && (
               <button
                 onClick={resetFiltros}
                 title="Restablecer filtros"
-                className="px-2.5 py-2 text-xs font-medium text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors flex items-center gap-1.5"
+                className="px-3 py-2 text-xs font-semibold text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"
               >
                 <FilterX className="w-3.5 h-3.5 text-slate-500" />
                 <span>Limpiar</span>
@@ -293,17 +295,17 @@ function ContratosContent() {
           </div>
 
           {canManage && (
-          <button
-            onClick={() => setIsNuevoModalOpen(true)}
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-xl shadow-xs flex items-center justify-center gap-2 transition-all flex-shrink-0"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Nuevo Contrato</span>
-          </button>
+            <button
+              onClick={() => setIsNuevoModalOpen(true)}
+              className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-xs font-semibold rounded-xl shadow-xs hover:shadow transition-all flex items-center justify-center gap-2 shrink-0 cursor-pointer"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Nuevo Contrato</span>
+            </button>
           )}
         </div>
 
-        {/* Contracts Table */}
+        {/* Contracts Table Modernizada */}
         <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
           <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
             <h4 className="text-sm font-bold text-slate-800 flex items-center gap-2">
@@ -323,20 +325,20 @@ function ContratosContent() {
           ) : contratosFiltrados.length === 0 ? (
             <div className="p-12 text-center text-slate-500 space-y-2">
               <FileText className="w-10 h-10 text-slate-300 mx-auto" />
-              <p className="text-sm font-medium text-slate-700">No se encontraron contratos con los filtros aplicados</p>
-              <p className="text-xs text-slate-400">Intente modificar los criterios de búsqueda o registre un nuevo contrato.</p>
+              <p className="text-sm font-bold text-slate-700">No se encontraron contratos con los filtros aplicados</p>
+              <p className="text-xs text-slate-400">Intente modificar los criterios de búsqueda o registre un nuevo contrato laboral.</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
-                <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-100">
+                <thead className="bg-slate-50/80 text-slate-600 font-semibold border-b border-slate-100">
                   <tr>
-                    <th className="px-6 py-3.5">Código</th>
-                    <th className="px-6 py-3.5">Empleado / Cargo</th>
-                    <th className="px-6 py-3.5">Tipo de Contrato</th>
+                    <th className="px-6 py-3.5">Código Oficial</th>
+                    <th className="px-6 py-3.5">Colaborador / Cargo</th>
+                    <th className="px-6 py-3.5">Modalidad de Contratación</th>
                     <th className="px-6 py-3.5">Período de Vigencia</th>
-                    <th className="px-6 py-3.5">Salario</th>
-                    <th className="px-6 py-3.5">Estado</th>
+                    <th className="px-6 py-3.5">Salario Mensual</th>
+                    <th className="px-6 py-3.5 text-center">Estado</th>
                     <th className="px-6 py-3.5 text-right">Acciones</th>
                   </tr>
                 </thead>
@@ -348,15 +350,21 @@ function ContratosContent() {
                       </td>
 
                       <td className="px-6 py-4">
-                        <p className="font-semibold text-slate-800">{contrato.nombreEmpleado}</p>
+                        <Link
+                          href={`/empleados/${contrato.empleadoId}`}
+                          className="font-bold text-slate-900 hover:text-blue-600 transition-colors flex items-center gap-1.5 group"
+                        >
+                          <span>{contrato.nombreEmpleado}</span>
+                          <ExternalLink className="w-3 h-3 text-slate-400 group-hover:text-blue-600 opacity-0 group-hover:opacity-100 transition-opacity" />
+                        </Link>
                         <p className="text-[11px] text-slate-500 flex items-center gap-1 mt-0.5">
-                          <User className="w-3 h-3 text-slate-400" />
-                          {contrato.cargo} • Cédula: {contrato.cedulaEmpleado}
+                          <Briefcase className="w-3 h-3 text-slate-400" />
+                          {contrato.cargo} • <span className="font-mono">{contrato.cedulaEmpleado}</span>
                         </p>
                       </td>
 
                       <td className="px-6 py-4 text-slate-700">
-                        <span className="px-2.5 py-1 bg-slate-100 border border-slate-200/80 rounded-md font-medium text-[11px]">
+                        <span className="px-2.5 py-1 bg-slate-100/90 border border-slate-200/80 rounded-lg font-semibold text-[11px] text-slate-700">
                           {contrato.tipoDescripcion}
                         </span>
                       </td>
@@ -368,7 +376,7 @@ function ContratosContent() {
                           <span className="text-slate-400">→</span>
                           <span>
                             {contrato.esIndefinido ? (
-                              <span className="text-blue-600 font-semibold">Indefinido</span>
+                              <span className="text-blue-700 font-bold">Tiempo Indefinido</span>
                             ) : (
                               contrato.fechaFin
                             )}
@@ -381,21 +389,21 @@ function ContratosContent() {
                         )}
                       </td>
 
-                      <td className="px-6 py-4 font-semibold text-slate-800">
+                      <td className="px-6 py-4 font-bold text-slate-900">
                         {contrato.salarioFormateado}
                       </td>
 
-                      <td className="px-6 py-4">
+                      <td className="px-6 py-4 text-center">
                         <StatusBadge status={contrato.estado} type="contrato" />
                       </td>
 
                       <td className="px-6 py-4 text-right space-x-2">
-                        {contrato.estado === EstadoContrato.Vigente && (
+                        {contrato.estado === EstadoContrato.Vigente && canManage && (
                           <button
                             onClick={() => setContratoAFinalizar(contrato)}
-                            className="px-2.5 py-1 text-[11px] font-medium text-slate-700 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-lg transition-colors"
+                            className="px-3 py-1.5 text-[11px] font-semibold text-rose-700 hover:text-rose-900 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-xl transition-all cursor-pointer shadow-2xs"
                           >
-                            Finalizar
+                            Finalizar Contrato
                           </button>
                         )}
                       </td>
@@ -445,4 +453,3 @@ export default function ContratosPage() {
     </Suspense>
   );
 }
-

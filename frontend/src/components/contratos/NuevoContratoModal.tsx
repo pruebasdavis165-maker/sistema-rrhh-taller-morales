@@ -2,15 +2,29 @@
 
 import { useState, useEffect } from 'react';
 import Modal from '@/components/Modal';
+import CustomSelect from '@/components/CustomSelect';
 import { contratosApi, empleadosApi } from '@/lib/api';
 import { EmpleadoDto, TipoContrato, ValidacionSolapamientoResponse } from '@/types';
-import { AlertTriangle, CheckCircle2, Loader2, Calendar } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Loader2, Calendar, DollarSign, ShieldAlert, FileText, User } from 'lucide-react';
 
 interface NuevoContratoModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
 }
+
+const TIPOS_CONTRATO_OPCIONES = [
+  { value: TipoContrato.PlazoFijo, label: 'Plazo Fijo (Determinado)' },
+  { value: TipoContrato.Indefinido, label: 'Tiempo Indeterminado' },
+  { value: TipoContrato.PeriodoPrueba, label: 'Período de Prueba (Art. 28)' },
+  { value: TipoContrato.ServiciosProfesionales, label: 'Servicios Profesionales' },
+  { value: TipoContrato.TemporalPorObra, label: 'Temporal por Obra' },
+];
+
+const MONEDAS_OPCIONES = [
+  { value: 'NIO', label: 'Córdobas (NIO C$)' },
+  { value: 'USD', label: 'Dólares (USD $)' },
+];
 
 export default function NuevoContratoModal({ isOpen, onClose, onSuccess }: NuevoContratoModalProps) {
   const [empleados, setEmpleados] = useState<EmpleadoDto[]>([]);
@@ -29,14 +43,14 @@ export default function NuevoContratoModal({ isOpen, onClose, onSuccess }: Nuevo
     salarioMonto: 15000,
     salarioMoneda: 'NIO',
     cargo: '',
-    clausulas: 'Jornada laboral ordinaria de 48 horas semanales según legislación laboral de Nicaragua.',
+    clausulas: 'Jornada laboral ordinaria de 48 horas semanales según legislación laboral de Nicaragua (Ley No. 185).',
   });
 
   useEffect(() => {
     if (isOpen) {
       empleadosApi.listar().then((data) => {
-        setEmpleados(data);
-        if (data.length > 0 && formData.empleadoId === 0) {
+        setEmpleados(data || []);
+        if (data && data.length > 0 && formData.empleadoId === 0) {
           const primerEmp = data[0];
           setFormData((prev) => ({
             ...prev,
@@ -67,7 +81,7 @@ export default function NuevoContratoModal({ isOpen, onClose, onSuccess }: Nuevo
       } finally {
         setValidatingOverlap(false);
       }
-    }, 400);
+    }, 350);
 
     return () => clearTimeout(timer);
   }, [formData.empleadoId, formData.fechaInicio, formData.fechaFin, formData.esIndefinido]);
@@ -85,7 +99,7 @@ export default function NuevoContratoModal({ isOpen, onClose, onSuccess }: Nuevo
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (overlapResult?.tieneSolapamiento) {
-      setErrorMessage('No puede guardar el contrato: existe solapamiento de fechas con otro contrato.');
+      setErrorMessage('No puede guardar el contrato: existe solapamiento temporal con otro contrato vigente (RF-0005).');
       return;
     }
 
@@ -114,44 +128,46 @@ export default function NuevoContratoModal({ isOpen, onClose, onSuccess }: Nuevo
     }
   };
 
+  const opcionesEmpleados = empleados.map((e) => ({
+    value: e.id,
+    label: `${e.nombreCompleto} (${e.cargo})`,
+  }));
+
+  const salarioFormateado = new Intl.NumberFormat('es-NI', {
+    style: 'currency',
+    currency: formData.salarioMoneda,
+    minimumFractionDigits: 2,
+  }).format(formData.salarioMonto || 0);
+
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
       title="Nuevo Contrato Laboral"
-      subtitle="Registro con validación estricta de solapamiento de fechas (RF-0005)"
+      subtitle="Registro con validación estricta de no solapamiento temporal (RF-0005 • Ley No. 185)"
       maxWidth="xl"
     >
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-5">
         {errorMessage && (
-          <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-xs text-red-700 flex items-start gap-2">
-            <AlertTriangle className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
+          <div className="p-3.5 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700 flex items-start gap-2.5">
+            <AlertTriangle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
             <span>{errorMessage}</span>
           </div>
         )}
 
-        {/* Empleado & Código */}
+        {/* Sección 1: Empleado y Código */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">
-              Empleado / Trabajador *
-            </label>
-            <select
+            <CustomSelect
+              label="Colaborador / Trabajador *"
               value={formData.empleadoId}
               onChange={(e) => handleEmpleadoChange(Number(e.target.value))}
-              required
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-            >
-              {empleados.map((emp) => (
-                <option key={emp.id} value={emp.id}>
-                  {emp.nombreCompleto} ({emp.cargo})
-                </option>
-              ))}
-            </select>
+              options={opcionesEmpleados}
+            />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">
+            <label className="block text-[11px] font-semibold text-slate-700 mb-1 tracking-wide">
               Código de Contrato *
             </label>
             <input
@@ -159,18 +175,16 @@ export default function NuevoContratoModal({ isOpen, onClose, onSuccess }: Nuevo
               value={formData.codigoContrato}
               onChange={(e) => setFormData({ ...formData, codigoContrato: e.target.value })}
               required
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-mono focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 uppercase"
+              className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono font-bold text-blue-700 focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 uppercase transition-colors"
             />
           </div>
         </div>
 
-        {/* Tipo de Contrato & Cargo */}
+        {/* Sección 2: Tipo de Contrato & Cargo */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">
-              Tipo de Contrato *
-            </label>
-            <select
+            <CustomSelect
+              label="Tipo de Contrato Legal *"
               value={formData.tipo}
               onChange={(e) => {
                 const tipo = Number(e.target.value);
@@ -180,18 +194,12 @@ export default function NuevoContratoModal({ isOpen, onClose, onSuccess }: Nuevo
                   esIndefinido: tipo === TipoContrato.Indefinido,
                 });
               }}
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-            >
-              <option value={TipoContrato.PlazoFijo}>Plazo Fijo (Determinado)</option>
-              <option value={TipoContrato.Indefinido}>Tiempo Indeterminado</option>
-              <option value={TipoContrato.PeriodoPrueba}>Período de Prueba</option>
-              <option value={TipoContrato.ServiciosProfesionales}>Servicios Profesionales</option>
-              <option value={TipoContrato.TemporalPorObra}>Temporal por Obra</option>
-            </select>
+              options={TIPOS_CONTRATO_OPCIONES}
+            />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">
+            <label className="block text-[11px] font-semibold text-slate-700 mb-1 tracking-wide">
               Cargo Asignado *
             </label>
             <input
@@ -199,17 +207,17 @@ export default function NuevoContratoModal({ isOpen, onClose, onSuccess }: Nuevo
               value={formData.cargo}
               onChange={(e) => setFormData({ ...formData, cargo: e.target.value })}
               required
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+              className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
             />
           </div>
         </div>
 
-        {/* Rango de Fechas */}
-        <div className="p-3 bg-blue-50/50 border border-blue-100 rounded-xl space-y-3">
-          <div className="flex items-center justify-between">
+        {/* Sección 3: Período de Vigencia con Verificación en Tiempo Real */}
+        <div className="p-4 bg-blue-50/60 border border-blue-100 rounded-2xl space-y-3">
+          <div className="flex items-center justify-between flex-wrap gap-2">
             <span className="text-xs font-bold text-blue-900 flex items-center gap-1.5">
               <Calendar className="w-3.5 h-3.5 text-blue-600" />
-              Período de Vigencia
+              Período de Vigencia Laboral
             </span>
             <label className="flex items-center gap-2 cursor-pointer">
               <input
@@ -222,9 +230,9 @@ export default function NuevoContratoModal({ isOpen, onClose, onSuccess }: Nuevo
                     tipo: e.target.checked ? TipoContrato.Indefinido : TipoContrato.PlazoFijo,
                   })
                 }
-                className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 h-3.5 w-3.5"
+                className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 h-4 w-4 cursor-pointer"
               />
-              <span className="text-[11px] font-medium text-slate-700">Tiempo Indeterminado</span>
+              <span className="text-xs font-semibold text-slate-700">Tiempo Indeterminado (Sin fin)</span>
             </label>
           </div>
 
@@ -238,7 +246,7 @@ export default function NuevoContratoModal({ isOpen, onClose, onSuccess }: Nuevo
                 value={formData.fechaInicio}
                 onChange={(e) => setFormData({ ...formData, fechaInicio: e.target.value })}
                 required
-                className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
               />
             </div>
 
@@ -252,28 +260,28 @@ export default function NuevoContratoModal({ isOpen, onClose, onSuccess }: Nuevo
                 disabled={formData.esIndefinido}
                 onChange={(e) => setFormData({ ...formData, fechaFin: e.target.value })}
                 required={!formData.esIndefinido}
-                className={`w-full px-3 py-1.5 rounded-lg text-xs border ${
+                className={`w-full px-3 py-1.5 rounded-xl text-xs border ${
                   formData.esIndefinido
                     ? 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed'
-                    : 'bg-white border-slate-200 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500'
+                    : 'bg-white border-slate-200 focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500'
                 }`}
               />
             </div>
           </div>
 
           {/* Banner de Validación Reactiva de Solapamiento RF-0005 */}
-          <div className="mt-2">
+          <div className="pt-1">
             {validatingOverlap ? (
               <div className="flex items-center gap-2 text-xs text-slate-500 py-1">
                 <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-600" />
-                <span>Comprobando solapamiento de fechas con otros contratos...</span>
+                <span>Validando solapamiento de fechas con otros contratos (RF-0005)...</span>
               </div>
             ) : overlapResult ? (
               overlapResult.tieneSolapamiento ? (
-                <div className="p-3 bg-red-500/10 border border-red-300 rounded-lg text-xs text-red-800 flex items-start gap-2.5 animate-in fade-in">
-                  <AlertTriangle className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
+                <div className="p-3 bg-red-500/10 border border-red-300 rounded-xl text-xs text-red-800 flex items-start gap-2.5 animate-in fade-in">
+                  <AlertTriangle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
                   <div>
-                    <strong className="font-semibold block text-red-900">
+                    <strong className="font-bold block text-red-900">
                       Conflicto de Solapamiento Detectado (RF-0005)
                     </strong>
                     <p className="mt-0.5 text-red-700">{overlapResult.mensaje}</p>
@@ -283,76 +291,76 @@ export default function NuevoContratoModal({ isOpen, onClose, onSuccess }: Nuevo
                   </div>
                 </div>
               ) : (
-                <div className="p-2.5 bg-emerald-50 border border-emerald-200 rounded-lg text-xs text-emerald-800 flex items-center gap-2 animate-in fade-in">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
-                  <span>{overlapResult.mensaje}</span>
+                <div className="p-2.5 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-800 flex items-center gap-2 animate-in fade-in">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span className="font-medium">{overlapResult.mensaje}</span>
                 </div>
               )
             ) : null}
           </div>
         </div>
 
-        {/* Salario y Moneda */}
+        {/* Sección 4: Salario y Moneda con Vista Previa Formateada */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">
+            <label className="block text-[11px] font-semibold text-slate-700 mb-1 tracking-wide">
               Salario Mensual *
             </label>
-            <input
-              type="number"
-              step="0.01"
-              min="1"
-              value={formData.salarioMonto}
-              onChange={(e) => setFormData({ ...formData, salarioMonto: Number(e.target.value) })}
-              required
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-semibold"
-            />
+            <div className="relative">
+              <input
+                type="number"
+                step="0.01"
+                min="1"
+                value={formData.salarioMonto}
+                onChange={(e) => setFormData({ ...formData, salarioMonto: Number(e.target.value) })}
+                required
+                className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-bold text-slate-800 transition-colors"
+              />
+            </div>
+            <p className="text-[11px] text-slate-500 mt-1 font-medium">
+              Valor legal: <span className="font-bold text-emerald-700">{salarioFormateado}</span>
+            </p>
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">
-              Moneda
-            </label>
-            <select
+            <CustomSelect
+              label="Moneda Oficial"
               value={formData.salarioMoneda}
               onChange={(e) => setFormData({ ...formData, salarioMoneda: e.target.value })}
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-            >
-              <option value="NIO">Córdobas (NIO C$)</option>
-              <option value="USD">Dólares (USD $)</option>
-            </select>
+              options={MONEDAS_OPCIONES}
+            />
           </div>
         </div>
 
-        {/* Cláusulas */}
+        {/* Sección 5: Cláusulas */}
         <div>
-          <label className="block text-xs font-semibold text-slate-700 mb-1">
-            Cláusulas y Observaciones
+          <label className="block text-[11px] font-semibold text-slate-700 mb-1 tracking-wide">
+            Cláusulas y Términos Contractuales
           </label>
           <textarea
             rows={2}
             value={formData.clausulas}
             onChange={(e) => setFormData({ ...formData, clausulas: e.target.value })}
-            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+            className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
           />
         </div>
 
-        {/* Actions */}
+        {/* Acciones */}
         <div className="pt-4 border-t border-slate-100 flex items-center justify-end gap-3">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+            className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
           >
             Cancelar
           </button>
           <button
             type="submit"
             disabled={loading || overlapResult?.tieneSolapamiento}
-            className={`px-5 py-2 text-xs font-semibold rounded-lg text-white transition-all flex items-center gap-2 ${
+            className={`px-5 py-2.5 text-xs font-semibold rounded-xl text-white transition-all flex items-center gap-2 cursor-pointer ${
               overlapResult?.tieneSolapamiento
                 ? 'bg-slate-400 cursor-not-allowed'
-                : 'bg-blue-600 hover:bg-blue-700 shadow-sm shadow-blue-600/30'
+                : 'bg-blue-600 hover:bg-blue-700 shadow-xs hover:shadow'
             }`}
           >
             {loading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}

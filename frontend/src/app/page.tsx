@@ -4,8 +4,8 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Header from '@/components/Header';
 import { useAuth } from '@/context/AuthContext';
-import { dashboardApi, auditoriaApi } from '@/lib/api';
-import { DashboardAnaliticaDto, AuditoriaDto } from '@/types';
+import { dashboardApi, auditoriaApi, contratosApi } from '@/lib/api';
+import { DashboardAnaliticaDto, AuditoriaDto, ContratoDto, EstadoContrato, TipoContrato } from '@/types';
 import Link from 'next/link';
 import {
   Users,
@@ -25,6 +25,10 @@ import {
   AlertOctagon,
   Info,
   Sparkles,
+  CheckCircle2,
+  Layers,
+  Activity,
+  Cpu
 } from 'lucide-react';
 import {
   PieChart,
@@ -41,7 +45,6 @@ import {
   Area,
 } from 'recharts';
 
-// ── Issue 3.1: Paleta Corporativa Exacta (Primario #1A56DB, Éxito #10B981, Alerta #F59E0B, Acento #D946EF)
 const SPECIALTY_COLORS = ['#1A56DB', '#10B981', '#F59E0B', '#D946EF', '#0284C7', '#64748b'];
 
 export default function DashboardPage() {
@@ -54,8 +57,10 @@ export default function DashboardPage() {
       router.replace(user.empleadoId ? `/empleados/${user.empleadoId}` : '/empleados');
     }
   }, [user, router]);
+
   const [analitica, setAnalitica] = useState<DashboardAnaliticaDto | null>(null);
   const [actividades, setActividades] = useState<AuditoriaDto[]>([]);
+  const [contratos, setContratos] = useState<ContratoDto[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -65,11 +70,13 @@ export default function DashboardPage() {
         const promises: Promise<any>[] = [dashboardApi.obtenerAnalitica()];
         if (user?.rol !== 'Supervisor') {
           promises.push(auditoriaApi.listar(6));
+          promises.push(contratosApi.listar({ pageSize: 100 }));
         }
 
-        const [resAnalitica, resAudit] = await Promise.all(promises);
+        const [resAnalitica, resAudit, resContratos] = await Promise.all(promises);
         setAnalitica(resAnalitica);
         if (resAudit) setActividades(resAudit);
+        if (resContratos?.items) setContratos(resContratos.items);
       } catch (err) {
         console.error('Error al cargar datos analíticos del dashboard', err);
       } finally {
@@ -88,6 +95,25 @@ export default function DashboardPage() {
     }).format(amount);
   };
 
+  // Cálculos Gerenciales Avanzados (Fase 5)
+  const totalEmpleados = analitica?.totalEmpleados || 0;
+  const contratosVigentes = analitica?.contratosVigentes || 0;
+  const tasaOcupacion = totalEmpleados > 0
+    ? Math.min(100, Math.round((contratosVigentes / totalEmpleados) * 100))
+    : 100;
+
+  // Distribución de contratos por modalidad
+  const totalContratosCount = contratos.length || 1;
+  const contratosIndefinidos = contratos.filter((c) => c.tipo === TipoContrato.Indefinido || c.esIndefinido).length;
+  const contratosPlazoFijo = contratos.filter((c) => c.tipo === TipoContrato.PlazoFijo).length;
+  const contratosPrueba = contratos.filter((c) => c.tipo === TipoContrato.PeriodoPrueba).length;
+  const contratosOtros = Math.max(0, contratos.length - (contratosIndefinidos + contratosPlazoFijo + contratosPrueba));
+
+  // Alertas tempranas agrupadas por criticidad
+  const alertas = analitica?.alertasContratacion || [];
+  const alertasCriticas = alertas.filter((a) => a.nivelAlerta === 'Critico' || a.diasRestantes <= 7);
+  const alertasPreventivas = alertas.filter((a) => a.diasRestantes > 7 && a.diasRestantes <= 30);
+
   return (
     <div className="flex-1 flex flex-col bg-slate-50 min-h-screen">
       <Header
@@ -96,10 +122,10 @@ export default function DashboardPage() {
       />
 
       <main className="p-8 max-w-7xl w-full mx-auto space-y-8">
-        {/* Welcome Banner Corporativo (Tema Claro, rounded-xl y shadow-md) */}
-        <div className="bg-white border border-slate-200/80 shadow-md hover:shadow-lg p-8 rounded-xl relative overflow-hidden transition-shadow">
+        {/* Welcome Banner Corporativo */}
+        <div className="bg-white border border-slate-200/80 shadow-md hover:shadow-lg p-8 rounded-2xl relative overflow-hidden transition-shadow">
           <div className="relative z-10 max-w-2xl">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 border border-blue-200 text-[#1A56DB] text-xs font-semibold mb-3 shadow-xs">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 border border-blue-200 text-[#1A56DB] text-xs font-semibold mb-3 shadow-2xs">
               <Wrench className="w-3.5 h-3.5 text-[#1A56DB]" />
               <span>Bienvenido, {user?.nombreCompleto || 'Usuario'} - Panel de {user?.rol || 'Gestión'}</span>
             </div>
@@ -117,7 +143,7 @@ export default function DashboardPage() {
                 <>
                   <Link
                     href="/contratos"
-                    className="px-4 py-2.5 bg-[#1A56DB] hover:bg-[#1546B0] active:bg-blue-900 text-white font-semibold text-xs rounded-xl shadow-md hover:shadow-lg flex items-center gap-2 transition-all cursor-pointer"
+                    className="px-4 py-2.5 bg-[#1A56DB] hover:bg-[#1546B0] active:bg-blue-900 text-white font-semibold text-xs rounded-xl shadow-xs hover:shadow-md flex items-center gap-2 transition-all cursor-pointer"
                   >
                     <FileText className="w-4 h-4" />
                     <span>Gestión de Contratos</span>
@@ -125,7 +151,7 @@ export default function DashboardPage() {
                   </Link>
                   <Link
                     href="/vacaciones"
-                    className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs rounded-xl border border-slate-200 flex items-center gap-2 transition-all shadow-xs hover:shadow-md cursor-pointer"
+                    className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs rounded-xl border border-slate-200 flex items-center gap-2 transition-all shadow-2xs hover:shadow-xs cursor-pointer"
                   >
                     <Palmtree className="w-4 h-4 text-[#10B981]" />
                     <span>Control de Vacaciones</span>
@@ -135,7 +161,7 @@ export default function DashboardPage() {
                 <>
                   <Link
                     href="/vacaciones"
-                    className="px-4 py-2.5 bg-[#1A56DB] hover:bg-[#1546B0] active:bg-blue-900 text-white font-semibold text-xs rounded-xl shadow-md hover:shadow-lg flex items-center gap-2 transition-all cursor-pointer"
+                    className="px-4 py-2.5 bg-[#1A56DB] hover:bg-[#1546B0] active:bg-blue-900 text-white font-semibold text-xs rounded-xl shadow-xs hover:shadow-md flex items-center gap-2 transition-all cursor-pointer"
                   >
                     <Palmtree className="w-4 h-4 text-white" />
                     <span>Control de Vacaciones</span>
@@ -143,7 +169,7 @@ export default function DashboardPage() {
                   </Link>
                   <Link
                     href="/empleados"
-                    className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs rounded-xl border border-slate-200 flex items-center gap-2 transition-all shadow-xs hover:shadow-md cursor-pointer"
+                    className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs rounded-xl border border-slate-200 flex items-center gap-2 transition-all shadow-2xs hover:shadow-xs cursor-pointer"
                   >
                     <Users className="w-4 h-4 text-[#1A56DB]" />
                     <span>Expedientes de Personal</span>
@@ -158,10 +184,10 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* KPI Metrics Cards (rounded-xl, shadow-md, hover:shadow-lg) */}
+        {/* KPI Metrics Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Card 1: Fuerza Laboral */}
-          <div className="bg-white p-6 rounded-xl border border-slate-200/80 shadow-md hover:shadow-lg transition-all flex items-center justify-between">
+          <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs hover:shadow-md transition-all flex items-center justify-between">
             <div>
               <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Fuerza Laboral</p>
               <h3 className="text-3xl font-extrabold text-slate-800 mt-1 font-heading">
@@ -176,8 +202,8 @@ export default function DashboardPage() {
 
           {!isSupervisor ? (
             <>
-              {/* Card 2: Contratos Vigentes (Éxito #10B981) */}
-              <div className="bg-white p-6 rounded-xl border border-slate-200/80 shadow-md hover:shadow-lg transition-all flex items-center justify-between">
+              {/* Card 2: Contratos Vigentes */}
+              <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs hover:shadow-md transition-all flex items-center justify-between">
                 <div>
                   <p className="text-xs font-semibold text-[#10B981] uppercase tracking-wider">Contratos Vigentes</p>
                   <h3 className="text-3xl font-extrabold text-slate-800 mt-1 font-heading">
@@ -190,8 +216,8 @@ export default function DashboardPage() {
                 </div>
               </div>
 
-              {/* Card 3: Planilla Mensual (Acento #D946EF) */}
-              <div className="bg-white p-6 rounded-xl border border-slate-200/80 shadow-md hover:shadow-lg transition-all flex items-center justify-between">
+              {/* Card 3: Planilla Mensual */}
+              <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs hover:shadow-md transition-all flex items-center justify-between">
                 <div>
                   <p className="text-xs font-semibold text-[#D946EF] uppercase tracking-wider flex items-center gap-1">
                     <Sparkles className="w-3.5 h-3.5" />
@@ -207,24 +233,24 @@ export default function DashboardPage() {
                 </div>
               </div>
 
-              {/* Card 4: Alertas Preventivas (Alerta #F59E0B) */}
-              <div className="bg-white p-6 rounded-xl border border-slate-200/80 shadow-md hover:shadow-lg transition-all flex items-center justify-between">
+              {/* Card 4: Tasa de Ocupación Laboral */}
+              <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs hover:shadow-md transition-all flex items-center justify-between">
                 <div>
-                  <p className="text-xs font-semibold text-[#F59E0B] uppercase tracking-wider">Alertas a 30 Días</p>
+                  <p className="text-xs font-semibold text-[#F59E0B] uppercase tracking-wider">Ocupación Técnica</p>
                   <h3 className="text-3xl font-extrabold text-slate-800 mt-1 font-heading">
-                    {loading ? <Loader2 className="w-5 h-5 animate-spin text-[#F59E0B]" /> : analitica?.alertasContratacion.length}
+                    {loading ? <Loader2 className="w-5 h-5 animate-spin text-[#F59E0B]" /> : `${tasaOcupacion}%`}
                   </h3>
-                  <p className="text-[11px] text-amber-700 mt-1">Próximos a vencer / prueba</p>
+                  <p className="text-[11px] text-amber-700 mt-1">Personal con contrato formal</p>
                 </div>
                 <div className="w-12 h-12 rounded-xl bg-amber-50 text-[#F59E0B] flex items-center justify-center border border-amber-200">
-                  <AlertTriangle className="w-6 h-6" />
+                  <Activity className="w-6 h-6" />
                 </div>
               </div>
             </>
           ) : (
             <>
               {/* Supervisores: Puestos Técnicos */}
-              <div className="bg-white p-6 rounded-xl border border-slate-200/80 shadow-md hover:shadow-lg transition-all flex items-center justify-between">
+              <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs hover:shadow-md transition-all flex items-center justify-between">
                 <div>
                   <p className="text-xs font-semibold text-[#10B981] uppercase tracking-wider">Puestos Técnicos</p>
                   <h3 className="text-3xl font-extrabold text-slate-800 mt-1 font-heading">
@@ -238,7 +264,7 @@ export default function DashboardPage() {
               </div>
 
               {/* Supervisores: Ausentismo Semestral */}
-              <div className="bg-white p-6 rounded-xl border border-slate-200/80 shadow-md hover:shadow-lg transition-all flex items-center justify-between">
+              <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs hover:shadow-md transition-all flex items-center justify-between">
                 <div>
                   <p className="text-xs font-semibold text-[#D946EF] uppercase tracking-wider">Ausentismo Semestral</p>
                   <h3 className="text-3xl font-extrabold text-slate-800 mt-1 font-heading">
@@ -252,7 +278,7 @@ export default function DashboardPage() {
               </div>
 
               {/* Supervisores: Capacidad Operativa */}
-              <div className="bg-white p-6 rounded-xl border border-slate-200/80 shadow-md hover:shadow-lg transition-all flex items-center justify-between">
+              <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs hover:shadow-md transition-all flex items-center justify-between">
                 <div>
                   <p className="text-xs font-semibold text-[#F59E0B] uppercase tracking-wider">Capacidad Operativa</p>
                   <h3 className="text-3xl font-extrabold text-slate-800 mt-1 font-heading">
@@ -268,9 +294,151 @@ export default function DashboardPage() {
           )}
         </div>
 
-        {/* Sistema de Alertas Preventivas de Contratación (Issue 3.1: Alerta #F59E0B a 30 días) */}
+        {/* Sección de Métricas Gerenciales Expandidas (Fase 5) */}
+        {!isSupervisor && (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Modalidad de Contratación */}
+            <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs space-y-4">
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
+                    <Layers className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-900">Modalidades de Contrato</h3>
+                    <p className="text-[11px] text-slate-400">Distribución por régimen laboral</p>
+                  </div>
+                </div>
+                <span className="text-xs font-mono font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full">
+                  {contratos.length} Total
+                </span>
+              </div>
+
+              <div className="space-y-3">
+                <div>
+                  <div className="flex items-center justify-between text-xs mb-1">
+                    <span className="font-medium text-slate-700">Tiempo Indeterminado</span>
+                    <span className="font-bold text-slate-900">{contratosIndefinidos} ({Math.round((contratosIndefinidos / totalContratosCount) * 100)}%)</span>
+                  </div>
+                  <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                    <div className="bg-blue-600 h-2 rounded-full" style={{ width: `${(contratosIndefinidos / totalContratosCount) * 100}%` }} />
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between text-xs mb-1">
+                    <span className="font-medium text-slate-700">Plazo Fijo / Determinado</span>
+                    <span className="font-bold text-slate-900">{contratosPlazoFijo} ({Math.round((contratosPlazoFijo / totalContratosCount) * 100)}%)</span>
+                  </div>
+                  <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                    <div className="bg-emerald-500 h-2 rounded-full" style={{ width: `${(contratosPlazoFijo / totalContratosCount) * 100}%` }} />
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between text-xs mb-1">
+                    <span className="font-medium text-slate-700">Período de Prueba (Art. 28)</span>
+                    <span className="font-bold text-slate-900">{contratosPrueba} ({Math.round((contratosPrueba / totalContratosCount) * 100)}%)</span>
+                  </div>
+                  <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                    <div className="bg-amber-500 h-2 rounded-full" style={{ width: `${(contratosPrueba / totalContratosCount) * 100}%` }} />
+                  </div>
+                </div>
+
+                {contratosOtros > 0 && (
+                  <div>
+                    <div className="flex items-center justify-between text-xs mb-1">
+                      <span className="font-medium text-slate-700">Otros / Servicios</span>
+                      <span className="font-bold text-slate-900">{contratosOtros} ({Math.round((contratosOtros / totalContratosCount) * 100)}%)</span>
+                    </div>
+                    <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                      <div className="bg-purple-500 h-2 rounded-full" style={{ width: `${(contratosOtros / totalContratosCount) * 100}%` }} />
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Resumen de Alertas Tempranas por Criticidad */}
+            <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs space-y-4">
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
+                    <AlertTriangle className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-900">Alertas Tempranas</h3>
+                    <p className="text-[11px] text-slate-400">Vencimientos y plazos de ley</p>
+                  </div>
+                </div>
+                <span className="text-xs font-mono font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full">
+                  {alertas.length} Activas
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-3.5 bg-rose-50/70 border border-rose-200 rounded-xl space-y-1">
+                  <span className="text-[10px] font-bold text-rose-700 uppercase tracking-wider">Críticas (&le; 7d)</span>
+                  <p className="text-2xl font-black text-rose-800">{alertasCriticas.length}</p>
+                  <p className="text-[10px] text-rose-600">Requieren renovación urgente</p>
+                </div>
+
+                <div className="p-3.5 bg-amber-50/70 border border-amber-200 rounded-xl space-y-1">
+                  <span className="text-[10px] font-bold text-amber-700 uppercase tracking-wider">Preventivas (&le; 30d)</span>
+                  <p className="text-2xl font-black text-amber-800">{alertasPreventivas.length}</p>
+                  <p className="text-[10px] text-amber-600">Margen de gestión formal</p>
+                </div>
+              </div>
+
+              <div className="pt-2">
+                <Link
+                  href="/contratos"
+                  className="w-full py-2 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 flex items-center justify-center gap-1.5 transition-colors"
+                >
+                  <span>Revisar Contratos en Alerta</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </Link>
+              </div>
+            </div>
+
+            {/* Estaciones de Mecanizado y Taller */}
+            <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs space-y-4">
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                    <Cpu className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-900">Capacidad Instalada</h3>
+                    <p className="text-[11px] text-slate-400">Estaciones de torno y matricería</p>
+                  </div>
+                </div>
+                <span className="text-xs font-mono font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">
+                  100% Operativa
+                </span>
+              </div>
+
+              <div className="space-y-2.5 text-xs">
+                <div className="flex items-center justify-between p-2 rounded-xl bg-slate-50 border border-slate-100">
+                  <span className="font-medium text-slate-700">Tornos Paralelos Convencionales</span>
+                  <span className="font-bold text-blue-700">2 Estaciones</span>
+                </div>
+                <div className="flex items-center justify-between p-2 rounded-xl bg-slate-50 border border-slate-100">
+                  <span className="font-medium text-slate-700">Mecanizado CNC Especializado</span>
+                  <span className="font-bold text-emerald-700">1 Centro Activo</span>
+                </div>
+                <div className="flex items-center justify-between p-2 rounded-xl bg-slate-50 border border-slate-100">
+                  <span className="font-medium text-slate-700">Soldadura Industrial TIG/MIG</span>
+                  <span className="font-bold text-amber-700">1 Puesto Certificado</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Sistema de Alertas Preventivas de Contratación Detallado */}
         {!isSupervisor && analitica && analitica.alertasContratacion.length > 0 && (
-          <div className="bg-white p-6 rounded-xl border border-slate-200/80 shadow-md hover:shadow-lg transition-shadow space-y-4">
+          <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-lg bg-amber-50 border border-amber-200 flex items-center justify-center text-[#F59E0B]">
@@ -294,7 +462,7 @@ export default function DashboardPage() {
               {analitica.alertasContratacion.map((alerta) => (
                 <div
                   key={alerta.contratoId}
-                  className={`p-4 rounded-xl border transition-all ${
+                  className={`p-4 rounded-2xl border transition-all ${
                     alerta.nivelAlerta === 'Critico'
                       ? 'bg-rose-50/50 border-rose-200 hover:border-rose-300'
                       : alerta.nivelAlerta === 'Advertencia'
@@ -354,8 +522,8 @@ export default function DashboardPage() {
         {!isSupervisor ? (
           <>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Gráfico 1: Comparativa Mensual de Costos de Planilla (Primario #1A56DB) */}
-              <div className="bg-white p-6 rounded-xl border border-slate-200/80 shadow-md hover:shadow-lg transition-shadow space-y-4">
+              {/* Gráfico 1: Comparativa Mensual de Costos de Planilla */}
+              <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs space-y-4">
                 <div className="flex items-center justify-between pb-2 border-b border-slate-100">
                   <div>
                     <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2 font-heading">
@@ -404,7 +572,7 @@ export default function DashboardPage() {
               </div>
 
               {/* Gráfico 2: Distribución de Personal por Especialidad Técnica */}
-              <div className="bg-white p-6 rounded-xl border border-slate-200/80 shadow-md hover:shadow-lg transition-shadow space-y-4">
+              <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs space-y-4">
                 <div className="flex items-center justify-between pb-2 border-b border-slate-100">
                   <div>
                     <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2 font-heading">
@@ -473,7 +641,7 @@ export default function DashboardPage() {
             {/* Gráfico 3 & Historial de Auditoría */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Métricas de Ausentismo (Vacaciones) */}
-              <div className="bg-white p-6 rounded-xl border border-slate-200/80 shadow-md hover:shadow-lg transition-shadow space-y-4">
+              <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs space-y-4">
                 <div className="flex items-center justify-between pb-2 border-b border-slate-100">
                   <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2 font-heading">
                     <TrendingDown className="w-4 h-4 text-[#D946EF]" />
@@ -514,7 +682,7 @@ export default function DashboardPage() {
               </div>
 
               {/* Historial de Auditoría Reciente (RF-0006) */}
-              <div className="lg:col-span-2 bg-white p-6 rounded-xl border border-slate-200/80 shadow-md hover:shadow-lg transition-shadow space-y-4">
+              <div className="lg:col-span-2 bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs space-y-4">
                 <div className="flex items-center justify-between pb-2 border-b border-slate-100">
                   <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2 font-heading">
                     <ShieldCheck className="w-4 h-4 text-[#1A56DB]" />
@@ -572,7 +740,7 @@ export default function DashboardPage() {
           /* Vista Analítica Exclusiva de Taller para Supervisores */
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Gráfico 1: Especialidad Técnica */}
-            <div className="bg-white p-6 rounded-xl border border-slate-200/80 shadow-md hover:shadow-lg transition-shadow space-y-4">
+            <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs space-y-4">
               <div className="flex items-center justify-between pb-2 border-b border-slate-100">
                 <div>
                   <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2 font-heading">
@@ -638,7 +806,7 @@ export default function DashboardPage() {
             </div>
 
             {/* Gráfico 2: Monitoreo de Ausentismo */}
-            <div className="bg-white p-6 rounded-xl border border-slate-200/80 shadow-md hover:shadow-lg transition-shadow space-y-4">
+            <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs space-y-4">
               <div className="flex items-center justify-between pb-2 border-b border-slate-100">
                 <div>
                   <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2 font-heading">
@@ -689,4 +857,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-

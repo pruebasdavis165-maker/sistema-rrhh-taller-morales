@@ -4,6 +4,7 @@ import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Header from '@/components/Header';
 import StatusBadge from '@/components/StatusBadge';
+import CustomSelect from '@/components/CustomSelect';
 import NuevaSolicitudModal from '@/components/vacaciones/NuevaSolicitudModal';
 import AprobarVacacionesModal from '@/components/vacaciones/AprobarVacacionesModal';
 import RechazarVacacionesModal from '@/components/vacaciones/RechazarVacacionesModal';
@@ -76,7 +77,6 @@ function VacacionesContent() {
   useEffect(() => {
     async function cargarCatalogos() {
       try {
-        // Carga dinámica de empleados desde /api/empleados
         const resEmpleados = await empleadosApi.listar();
         setEmpleados(resEmpleados || []);
 
@@ -95,8 +95,6 @@ function VacacionesContent() {
         console.error('Error al cargar empleados para filtro de vacaciones', err);
       }
 
-      // Catálogo de estados de vacaciones
-      // TODO: Si en el futuro se crea el endpoint /api/catalogos/estados-vacaciones en .NET, reemplazar este fallback
       setEstadosVacaciones([
         { id: EstadoVacaciones.Pendiente, nombre: 'Pendiente' },
         { id: EstadoVacaciones.Aprobada, nombre: 'Aprobada' },
@@ -168,6 +166,21 @@ function VacacionesContent() {
   const gozadas = solicitudes.filter((s) => s.estado === EstadoVacaciones.Gozada).length;
   const hayFiltrosActivos = Boolean(selectedEmpleadoId || selectedEstado || searchTerm);
 
+  const opcionesSaldoEmpleados = empleados.map((emp) => ({
+    value: emp.id,
+    label: `${emp.nombreCompleto} (${emp.cargo})`,
+  }));
+
+  const opcionesFiltroEmpleados = empleados.map((emp) => ({
+    value: emp.id,
+    label: emp.nombreCompleto,
+  }));
+
+  const opcionesFiltroEstados = estadosVacaciones.map((est) => ({
+    value: est.id,
+    label: est.nombre,
+  }));
+
   return (
     <div className="flex-1 flex flex-col bg-slate-50 min-h-screen">
       <Header
@@ -234,19 +247,13 @@ function VacacionesContent() {
             </div>
 
             <div className="flex items-center gap-3">
-              <div className="relative">
-                <select
+              <div className="w-64 sm:w-80">
+                <CustomSelect
                   value={selectedSaldoEmpleadoId || ''}
                   onChange={(e) => handleSaldoEmpleadoChange(Number(e.target.value))}
                   aria-label="Seleccionar colaborador para cálculo de saldo"
-                  className="px-4 py-2.5 bg-slate-50 hover:bg-slate-100/80 border border-slate-200 rounded-xl text-xs sm:text-sm font-medium text-slate-800 focus:outline-hidden focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all cursor-pointer shadow-xs"
-                >
-                  {empleados.map((emp) => (
-                    <option key={emp.id} value={emp.id}>
-                      {emp.nombreCompleto} ({emp.cargo})
-                    </option>
-                  ))}
-                </select>
+                  options={opcionesSaldoEmpleados}
+                />
               </div>
               {saldoLoading && <Loader2 className="w-4 h-4 animate-spin text-blue-600 shrink-0" />}
             </div>
@@ -318,7 +325,7 @@ function VacacionesContent() {
                 </div>
               </div>
 
-              {/* 4. SALDO DISPONIBLE REAL (Hero Card / Máxima Jerarquía Visual) */}
+              {/* 4. SALDO DISPONIBLE REAL (Hero Card) */}
               <div className="bg-gradient-to-br from-emerald-50 via-emerald-50/30 to-white border-2 border-emerald-500 p-5 rounded-2xl flex flex-col justify-between transition-all shadow-md shadow-emerald-500/10 hover:shadow-lg relative overflow-hidden">
                 <div className="flex items-center justify-between">
                   <span className="text-[11px] font-extrabold text-emerald-800 uppercase tracking-wider flex items-center gap-1.5">
@@ -346,51 +353,43 @@ function VacacionesContent() {
           )}
         </div>
 
-        {/* Action & Filter Bar */}
-        <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+        {/* Action & Filter Bar con CustomSelect */}
+        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex flex-wrap items-center gap-3 flex-1">
-            <div className="relative flex-1 min-w-[240px]">
+            <div className="relative flex-1 min-w-[220px]">
               <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
                 type="text"
                 placeholder="Buscar por colaborador, motivo o cédula..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-9 pr-4 py-2 bg-slate-50/80 hover:bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-700 placeholder:text-slate-400 focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
+                className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-700 placeholder:text-slate-400 focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
               />
             </div>
 
-            <select
-              value={selectedEmpleadoId || ''}
-              onChange={(e) => setSelectedEmpleadoId(e.target.value ? Number(e.target.value) : undefined)}
-              className="px-3 py-2 bg-slate-50/80 hover:bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-700 focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
-            >
-              <option value="">Todos los Colaboradores</option>
-              {empleados.map((emp) => (
-                <option key={emp.id} value={emp.id}>
-                  {emp.nombreCompleto}
-                </option>
-              ))}
-            </select>
+            <div className="w-full sm:w-52">
+              <CustomSelect
+                value={selectedEmpleadoId || ''}
+                onChange={(e) => setSelectedEmpleadoId(e.target.value ? Number(e.target.value) : undefined)}
+                options={opcionesFiltroEmpleados}
+                placeholderOption="Todos los Colaboradores"
+              />
+            </div>
 
-            <select
-              value={selectedEstado || ''}
-              onChange={(e) => setSelectedEstado(e.target.value ? Number(e.target.value) : undefined)}
-              className="px-3 py-2 bg-slate-50/80 hover:bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-700 focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
-            >
-              <option value="">Todos los Estados</option>
-              {estadosVacaciones.map((est) => (
-                <option key={est.id} value={est.id}>
-                  {est.nombre}
-                </option>
-              ))}
-            </select>
+            <div className="w-full sm:w-44">
+              <CustomSelect
+                value={selectedEstado || ''}
+                onChange={(e) => setSelectedEstado(e.target.value ? Number(e.target.value) : undefined)}
+                options={opcionesFiltroEstados}
+                placeholderOption="Todos los Estados"
+              />
+            </div>
 
             {hayFiltrosActivos && (
               <button
                 onClick={resetFiltros}
                 title="Limpiar filtros"
-                className="px-2.5 py-2 text-xs font-medium text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors flex items-center gap-1.5"
+                className="px-3 py-2 text-xs font-semibold text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"
               >
                 <FilterX className="w-3.5 h-3.5 text-slate-500" />
                 <span>Limpiar</span>
@@ -400,7 +399,7 @@ function VacacionesContent() {
 
           <button
             onClick={() => setIsNuevaModalOpen(true)}
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-xl shadow-xs flex items-center justify-center gap-2 transition-all flex-shrink-0"
+            className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-xs font-semibold rounded-xl shadow-xs hover:shadow flex items-center justify-center gap-2 transition-all shrink-0 cursor-pointer"
           >
             <Plus className="w-4 h-4" />
             <span>Nueva Solicitud</span>
@@ -427,20 +426,20 @@ function VacacionesContent() {
           ) : solicitudesFiltradas.length === 0 ? (
             <div className="p-12 text-center text-slate-500 space-y-2">
               <Palmtree className="w-10 h-10 text-slate-300 mx-auto" />
-              <p className="text-sm font-medium text-slate-700">No se encontraron solicitudes con los filtros aplicados</p>
+              <p className="text-sm font-bold text-slate-700">No se encontraron solicitudes con los filtros aplicados</p>
               <p className="text-xs text-slate-400">Intente modificar los criterios de búsqueda o registre una nueva solicitud.</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
-                <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-100">
+                <thead className="bg-slate-50/80 text-slate-600 font-semibold border-b border-slate-100">
                   <tr>
-                    <th className="px-6 py-3.5">ID</th>
+                    <th className="px-6 py-3.5">ID Solicitud</th>
                     <th className="px-6 py-3.5">Colaborador</th>
                     <th className="px-6 py-3.5">Período Solicitado</th>
                     <th className="px-6 py-3.5">Días a Descontar</th>
                     <th className="px-6 py-3.5">Motivo / Justificación</th>
-                    <th className="px-6 py-3.5">Estado</th>
+                    <th className="px-6 py-3.5 text-center">Estado</th>
                     <th className="px-6 py-3.5 text-right">Resolución</th>
                   </tr>
                 </thead>
@@ -452,10 +451,10 @@ function VacacionesContent() {
                       </td>
 
                       <td className="px-6 py-4">
-                        <p className="font-semibold text-slate-800">{solicitud.nombreEmpleado}</p>
+                        <p className="font-bold text-slate-900">{solicitud.nombreEmpleado}</p>
                         <p className="text-[11px] text-slate-500 flex items-center gap-1 mt-0.5">
                           <User className="w-3 h-3 text-slate-400" />
-                          Cédula: {solicitud.cedulaEmpleado}
+                          Cédula: <span className="font-mono">{solicitud.cedulaEmpleado}</span>
                         </p>
                       </td>
 
@@ -469,7 +468,7 @@ function VacacionesContent() {
                       </td>
 
                       <td className="px-6 py-4 font-bold text-slate-800">
-                        <span className="px-2.5 py-1 bg-blue-50 text-blue-700 rounded-lg">
+                        <span className="px-2.5 py-1 bg-blue-50 text-blue-700 font-semibold rounded-lg">
                           {solicitud.diasSolicitados} días
                         </span>
                       </td>
@@ -483,7 +482,7 @@ function VacacionesContent() {
                         )}
                       </td>
 
-                      <td className="px-6 py-4">
+                      <td className="px-6 py-4 text-center">
                         <StatusBadge status={solicitud.estado} type="vacaciones" />
                       </td>
 
@@ -493,14 +492,14 @@ function VacacionesContent() {
                             <div className="flex items-center justify-end gap-1.5">
                               <button
                                 onClick={() => setSolicitudAAprobar(solicitud)}
-                                className="px-2.5 py-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200/80 rounded-lg flex items-center gap-1 transition-colors cursor-pointer"
+                                className="px-2.5 py-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200/80 rounded-xl flex items-center gap-1 transition-all cursor-pointer shadow-2xs"
                               >
                                 <Check className="w-3 h-3" />
                                 <span>Aprobar</span>
                               </button>
                               <button
                                 onClick={() => setSolicitudARechazar(solicitud)}
-                                className="px-2.5 py-1 text-[11px] font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200/80 rounded-lg flex items-center gap-1 transition-colors cursor-pointer"
+                                className="px-2.5 py-1 text-[11px] font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200/80 rounded-xl flex items-center gap-1 transition-all cursor-pointer shadow-2xs"
                               >
                                 <X className="w-3 h-3" />
                                 <span>Rechazar</span>
@@ -578,4 +577,3 @@ export default function VacacionesPage() {
     </Suspense>
   );
 }
-
