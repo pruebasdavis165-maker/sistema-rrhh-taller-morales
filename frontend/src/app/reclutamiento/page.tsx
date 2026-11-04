@@ -32,7 +32,9 @@ import {
   RefreshCw,
   Paperclip,
   UploadCloud,
-  FileCheck
+  FileCheck,
+  CheckCircle as CheckCircleIcon,
+  Award
 } from 'lucide-react';
 
 export default function ReclutamientoPage() {
@@ -78,16 +80,11 @@ export default function ReclutamientoPage() {
     tamano: string;
   } | null>(null);
 
-  // Notificación de envío de correo electrónico
-  const [notificacionEmail, setNotificacionEmail] = useState<{
-    mostrar: boolean;
-    candidatoNombre: string;
-    correo: string;
-    vacante: string;
+  // Toast flotante inferior derecho
+  const [toastNotificacion, setToastNotificacion] = useState<{
+    mensaje: string;
+    subtexto?: string;
   } | null>(null);
-
-  // Toast de feedback rápido
-  const [toastFeedback, setToastFeedback] = useState<string | null>(null);
 
   // Formularios
   const [formVacante, setFormVacante] = useState<CrearReclutamientoRequest>({
@@ -113,7 +110,6 @@ export default function ReclutamientoPage() {
         const updated = (data || []).find((v) => v.id === vacanteSeleccionada.id);
         if (updated) {
           setVacanteSeleccionada(updated);
-          // Si hay un candidato en modal de detalle, actualizarlo también
           if (candidatoDetalle) {
             const candActualizado = updated.candidatos.find((c) => c.id === candidatoDetalle.id);
             if (candActualizado) setCandidatoDetalle(candActualizado);
@@ -131,6 +127,13 @@ export default function ReclutamientoPage() {
     cargarVacantes();
   }, []);
 
+  const mostrarToast = (mensaje: string, subtexto?: string) => {
+    setToastNotificacion({ mensaje, subtexto });
+    setTimeout(() => {
+      setToastNotificacion(null);
+    }, 6000);
+  };
+
   const handleCrearVacante = async (e: React.FormEvent) => {
     e.preventDefault();
     setGuardando(true);
@@ -147,7 +150,7 @@ export default function ReclutamientoPage() {
       if (creada?.id) {
         setVacanteSeleccionada(creada);
       }
-      mostrarToast('Vacante publicada con éxito');
+      mostrarToast('Convocatoria de vacante creada con éxito');
     } catch (err: any) {
       setErrorForm(err.message || 'Error al publicar la vacante');
     } finally {
@@ -166,7 +169,7 @@ export default function ReclutamientoPage() {
   };
 
   const handleEliminarVacante = async (vacanteId: number, cargo: string) => {
-    if (!confirm(`¿Está seguro de eliminar la vacante "${cargo}"? También se eliminarán todos los candidatos vinculados a esta convocatoria. Esta acción no se puede deshacer.`)) {
+    if (!confirm(`¿Está seguro de eliminar la vacante "${cargo}"? También se eliminarán los candidatos registrados en esta convocatoria.`)) {
       return;
     }
 
@@ -219,9 +222,7 @@ export default function ReclutamientoPage() {
 
       await reclutamientoApi.agregarCandidato(modalNuevoCandidato, payload);
       
-      const nombreCompleto = `${formCandidato.nombres} ${formCandidato.apellidos}`.trim();
       const correoDestino = formCandidato.correo;
-      const nombreVacante = vacanteSeleccionada?.cargoSolicitado || 'Convocatoria Técnica';
       
       setModalNuevoCandidato(null);
       setArchivoCv(null);
@@ -235,19 +236,11 @@ export default function ReclutamientoPage() {
       
       await cargarVacantes();
 
-      // Despliegue de confirmación en la UI
-      setNotificacionEmail({
-        mostrar: true,
-        candidatoNombre: nombreCompleto,
-        correo: correoDestino,
-        vacante: nombreVacante,
-      });
-
-      mostrarToast(`¡Postulación registrada y correo enviado a ${correoDestino}!`);
-
-      setTimeout(() => {
-        setNotificacionEmail(null);
-      }, 9000);
+      // Notificación flotante abajo a la derecha requerida
+      mostrarToast(
+        'Se envió correo de notificación al candidato sobre su estado en la vacante',
+        `Mensaje despachado a ${correoDestino}`
+      );
 
     } catch (err: any) {
       setErrorForm(err.message || 'Error al postular al candidato');
@@ -260,7 +253,11 @@ export default function ReclutamientoPage() {
     try {
       await reclutamientoApi.actualizarEstadoCandidato(candidatoId, nuevoEstado, resultado);
       await cargarVacantes();
-      mostrarToast(`Estado del candidato actualizado a: ${nuevoEstado}`);
+      // Notificación abajo a la derecha informando el envío de correo de estado
+      mostrarToast(
+        'Se envió correo de notificación al candidato sobre su estado en la vacante',
+        `Nuevo estado registrado: ${nuevoEstado}`
+      );
     } catch (err: any) {
       alert(`Error al actualizar estado: ${err.message || 'Error inesperado'}`);
     }
@@ -298,13 +295,6 @@ export default function ReclutamientoPage() {
     }
   };
 
-  const mostrarToast = (msg: string) => {
-    setToastFeedback(msg);
-    setTimeout(() => {
-      setToastFeedback(null);
-    }, 4000);
-  };
-
   if (!isMounted) {
     return (
       <div className="flex items-center justify-center min-h-screen text-slate-400">
@@ -313,10 +303,21 @@ export default function ReclutamientoPage() {
     );
   }
 
-  const totalCandidatos = (vacantes || []).reduce((acc, curr) => acc + (curr?.totalCandidatos || 0), 0);
+  // Métricas avanzadas globales y por vacante seleccionada
+  const todosLosCandidatos = (vacantes || []).flatMap((v) => v.candidatos || []);
+  const totalCandidatos = todosLosCandidatos.length;
+  const vacantesAbiertas = (vacantes || []).filter((v) => v.estado !== 'Cerrada' && v.estado !== 'Cerrado').length;
+  const vacantesCerradas = (vacantes || []).filter((v) => v.estado === 'Cerrada' || v.estado === 'Cerrado').length;
+  
+  const candidatosDeVacante = vacanteSeleccionada?.candidatos || [];
+  const aprobadosEnVacante = candidatosDeVacante.filter((c) => c.estado === 'Aprobado').length;
+  const cvsEnVacante = candidatosDeVacante.filter((c) => c.tieneDocumento).length;
+
+  const totalAprobadosGlobal = todosLosCandidatos.filter((c) => c.estado === 'Aprobado').length;
+  const totalCvsGlobal = todosLosCandidatos.filter((c) => c.tieneDocumento).length;
 
   // Filtrado reactivo de candidatos para la vacante seleccionada
-  const candidatosFiltrados = (vacanteSeleccionada?.candidatos || []).filter((c) => {
+  const candidatosFiltrados = candidatosDeVacante.filter((c) => {
     const cumpleEstado = filtroEstado === 'Todos' || c.estado === filtroEstado;
     const q = busquedaCandidato.toLowerCase().trim();
     const cumpleBusqueda = !q || (
@@ -337,70 +338,100 @@ export default function ReclutamientoPage() {
       />
 
       <main className="p-8 max-w-7xl w-full mx-auto space-y-6">
-        {/* Toast Notificación Flotante */}
-        {toastFeedback && (
-          <div className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-xl flex items-center gap-2.5 text-xs font-semibold animate-in fade-in slide-in-from-bottom-3 border border-slate-700">
-            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-            <span>{toastFeedback}</span>
-          </div>
-        )}
-
-        {/* Banner de Confirmación de Correo Electrónico Despachado */}
-        {notificacionEmail?.mostrar && (
-          <div className="p-4 bg-emerald-50 border border-emerald-300 text-emerald-950 rounded-2xl flex items-center justify-between shadow-sm animate-in fade-in slide-in-from-top-3">
-            <div className="flex items-center gap-3.5">
-              <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0 border border-emerald-200 shadow-2xs">
-                <Send className="w-5 h-5 text-emerald-700" />
-              </div>
-              <div>
-                <p className="text-xs font-bold text-emerald-950">
-                  ¡Postulación Registrada y Notificación Enviada por Correo!
+        {/* Toast Notificación Inferior Derecha (Diseño Empresarial) */}
+        {toastNotificacion && (
+          <div className="fixed bottom-6 right-6 z-50 max-w-md bg-slate-900 text-white p-4 rounded-2xl shadow-2xl flex items-start gap-3 border border-slate-700 animate-in fade-in slide-in-from-bottom-4">
+            <div className="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-500/30">
+              <Send className="w-4 h-4" />
+            </div>
+            <div className="space-y-0.5 flex-1 pr-2">
+              <p className="text-xs font-bold text-white leading-snug">
+                {toastNotificacion.mensaje}
+              </p>
+              {toastNotificacion.subtexto && (
+                <p className="text-[11px] text-slate-400 leading-tight">
+                  {toastNotificacion.subtexto}
                 </p>
-                <p className="text-[11px] text-emerald-800 mt-0.5">
-                  Se ha despachado un comprobante oficial de postulación a{' '}
-                  <span className="font-bold underline">{notificacionEmail.correo}</span> para{' '}
-                  <span className="font-bold">{notificacionEmail.candidatoNombre}</span> para la vacante de {notificacionEmail.vacante}.
-                </p>
-              </div>
+              )}
             </div>
             <button
-              onClick={() => setNotificacionEmail(null)}
-              className="p-1.5 text-emerald-700 hover:text-emerald-950 rounded-lg hover:bg-emerald-100/60 transition-colors cursor-pointer"
+              onClick={() => setToastNotificacion(null)}
+              className="text-slate-400 hover:text-white p-1 rounded-lg cursor-pointer"
             >
-              <X className="w-4 h-4" />
+              <X className="w-3.5 h-3.5" />
             </button>
           </div>
         )}
 
-        {/* KPI Summary Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        {/* Panel Dinámico de Métricas (KPIs Ejecutivos) */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Tarjeta 1: Total Convocatorias */}
           <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center justify-between">
-            <div>
-              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Vacantes Publicadas</p>
-              <p className="text-2xl font-bold text-slate-900 mt-1">{(vacantes || []).length}</p>
+            <div className="space-y-1">
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Convocatorias</p>
+              <p className="text-2xl font-bold text-slate-900">{(vacantes || []).length}</p>
+              <p className="text-[11px] text-slate-500">
+                <span className="text-emerald-600 font-semibold">{vacantesAbiertas} abiertas</span> • {vacantesCerradas} cerradas
+              </p>
             </div>
-            <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+            <div className="w-11 h-11 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
               <Briefcase className="w-5 h-5" />
             </div>
           </div>
 
+          {/* Tarjeta 2: Candidatos Dinámicos (Por Convocatoria o Total General) */}
           <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center justify-between">
-            <div>
-              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Candidatos Postulados</p>
-              <p className="text-2xl font-bold text-slate-900 mt-1">{totalCandidatos}</p>
+            <div className="space-y-1 overflow-hidden">
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider truncate">
+                {vacanteSeleccionada ? 'Postulantes en Vacante' : 'Total Candidatos'}
+              </p>
+              <p className="text-2xl font-bold text-slate-900">
+                {vacanteSeleccionada ? candidatosDeVacante.length : totalCandidatos}
+              </p>
+              <p className="text-[11px] text-slate-500 truncate">
+                {vacanteSeleccionada 
+                  ? `Plaza: ${vacanteSeleccionada.cargoSolicitado}`
+                  : `${(vacantes || []).length} convocatorias activas`}
+              </p>
             </div>
-            <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+            <div className="w-11 h-11 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
               <Users className="w-5 h-5" />
             </div>
           </div>
 
+          {/* Tarjeta 3: Candidatos Calificados / Aprobados */}
           <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center justify-between">
-            <div>
-              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Taller Especializado</p>
-              <p className="text-sm font-bold text-emerald-700 mt-1">Torno, CNC, Fresa y Soldadura</p>
+            <div className="space-y-1">
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Aprobados</p>
+              <p className="text-2xl font-bold text-emerald-700">
+                {vacanteSeleccionada ? aprobadosEnVacante : totalAprobadosGlobal}
+              </p>
+              <p className="text-[11px] text-slate-500">
+                {vacanteSeleccionada
+                  ? `${candidatosDeVacante.length > 0 ? Math.round((aprobadosEnVacante / candidatosDeVacante.length) * 100) : 0}% aptos para contrato`
+                  : 'Listos para Alta Laboral'}
+              </p>
             </div>
-            <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
-              <CheckCircle className="w-5 h-5" />
+            <div className="w-11 h-11 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+              <Award className="w-5 h-5" />
+            </div>
+          </div>
+
+          {/* Tarjeta 4: Expedientes con Currículum Vitae (CV) */}
+          <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center justify-between">
+            <div className="space-y-1">
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">CVs Digitales</p>
+              <p className="text-2xl font-bold text-purple-700">
+                {vacanteSeleccionada ? cvsEnVacante : totalCvsGlobal}
+              </p>
+              <p className="text-[11px] text-slate-500">
+                {vacanteSeleccionada
+                  ? `${candidatosDeVacante.length > 0 ? Math.round((cvsEnVacante / candidatosDeVacante.length) * 100) : 0}% con archivo adjunto`
+                  : 'Documentos PDF/Word cargados'}
+              </p>
+            </div>
+            <div className="w-11 h-11 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center shrink-0">
+              <FileText className="w-5 h-5" />
             </div>
           </div>
         </div>
@@ -589,7 +620,7 @@ export default function ReclutamientoPage() {
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
                       <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-                        Candidatos Evaluados ({candidatosFiltrados.length} de {(vacanteSeleccionada.candidatos || []).length})
+                        Candidatos Evaluados ({candidatosFiltrados.length} de {candidatosDeVacante.length})
                       </h4>
                       <p className="text-[11px] text-slate-400">Haga clic en cualquier candidato para ver su expediente y CV</p>
                     </div>
@@ -978,7 +1009,7 @@ export default function ReclutamientoPage() {
           </div>
         )}
 
-        {/* Modal Postular Candidato con Soporte para Adjuntar CV */}
+        {/* Modal Postular Candidato (Limpio, sin aviso intrusivo) */}
         {modalNuevoCandidato && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
             <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-xl border border-slate-200/80 space-y-5 animate-in fade-in zoom-in-95 max-h-[90vh] overflow-y-auto">
@@ -997,17 +1028,6 @@ export default function ReclutamientoPage() {
                 <button onClick={() => { setModalNuevoCandidato(null); setArchivoCv(null); }} className="text-slate-400 hover:text-slate-600 cursor-pointer p-1">
                   <X className="w-5 h-5" />
                 </button>
-              </div>
-
-              {/* Aviso Informativo del Envío de Correo */}
-              <div className="p-3.5 bg-blue-50/90 border border-blue-200 text-blue-900 rounded-xl text-xs flex items-start gap-2.5">
-                <Send className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
-                <div>
-                  <span className="font-semibold block text-blue-900">Notificación Automática por Correo</span>
-                  <p className="text-[11px] text-blue-700 mt-0.5">
-                    Al guardar este registro, el sistema enviará un correo formal con el resumen de la vacante al buzón del candidato.
-                  </p>
-                </div>
               </div>
 
               {errorForm && (
@@ -1152,7 +1172,7 @@ export default function ReclutamientoPage() {
                     ) : (
                       <>
                         <Send className="w-3.5 h-3.5" />
-                        <span>Registrar y Notificar</span>
+                        <span>Registrar Postulación</span>
                       </>
                     )}
                   </button>

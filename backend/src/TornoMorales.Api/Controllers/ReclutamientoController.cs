@@ -390,6 +390,47 @@ public class ReclutamientoController : ControllerBase
         candidato.ActualizarEstado(request.NuevoEstado, request.Resultado);
         await _context.SaveChangesAsync(ct);
 
+        // Notificación por correo al candidato informando su nuevo estado
+        if (_emailNotificationService != null && !string.IsNullOrWhiteSpace(candidato.Correo))
+        {
+            try
+            {
+                var vacante = await _context.Reclutamientos.FindAsync(new object[] { candidato.ReclutamientoId }, ct);
+                var cargo = vacante?.CargoSolicitado ?? "Convocatoria Técnica";
+                var asunto = $"Actualización de Postulación: {request.NuevoEstado} - {cargo} - Taller de Torno Morales López";
+                var html = $@"<div style=""font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 620px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; background-color: #ffffff; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);"">
+                    <div style=""background: linear-gradient(135deg, #1e40af 0%, #2563eb 100%); color: #ffffff; padding: 24px; text-align: center;"">
+                        <h1 style=""margin: 0; font-size: 20px; font-weight: 700;"">Taller de Torno Morales López</h1>
+                        <p style=""margin: 4px 0 0 0; font-size: 13px; color: #bfdbfe;"">Actualización del Proceso de Selección</p>
+                    </div>
+                    <div style=""padding: 24px;"">
+                        <h2 style=""color: #0f172a; font-size: 17px; margin: 0 0 12px 0;"">Estimado(a) {candidato.NombreCompleto},</h2>
+                        <p style=""color: #334155; font-size: 14px; line-height: 1.6; margin-bottom: 16px;"">
+                            Le notificamos que el estado de su postulación laboral para el cargo de <strong>{cargo}</strong> ha sido actualizado en nuestro sistema:
+                        </p>
+                        <div style=""background-color: #f8fafc; border: 1px solid #cbd5e1; border-radius: 10px; padding: 16px; margin-bottom: 20px;"">
+                            <p style=""margin: 0; font-size: 14px; color: #1e293b;"">
+                                <strong>Nuevo Estado:</strong> <span style=""color: #2563eb; font-weight: 700;"">{request.NuevoEstado}</span>
+                            </p>
+                        </div>
+                        <p style=""font-size: 13px; color: #64748b; line-height: 1.5; margin: 0;"">
+                            El departamento de Recursos Humanos y Supervisión Técnica del taller continuará dando seguimiento a su expediente.
+                        </p>
+                    </div>
+                    <div style=""background-color: #f1f5f9; padding: 14px 24px; text-align: center; font-size: 12px; color: #94a3b8; border-top: 1px solid #e2e8f0;"">
+                        Taller de Torno Morales López &bull; Managua, Nicaragua
+                    </div>
+                </div>";
+
+                await _emailNotificationService.EnviarCorreoAsync(candidato.Correo, asunto, html, null, ct);
+                _logger.LogInformation("Correo de actualización de estado ({Estado}) despachado a {Correo}", request.NuevoEstado, candidato.Correo);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "No se pudo despachar el correo de cambio de estado a {Correo}", candidato.Correo);
+            }
+        }
+
         var dto = new CandidatoDto(
             candidato.Id,
             candidato.Nombres,
