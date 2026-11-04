@@ -91,6 +91,17 @@ namespace TornoMorales.Infrastructure.Persistence.Migrations
                         .HasMaxLength(300)
                         .HasColumnType("character varying(300)");
 
+                    b.Property<string>("DocumentoBase64")
+                        .HasColumnType("text");
+
+                    b.Property<string>("DocumentoNombre")
+                        .HasMaxLength(250)
+                        .HasColumnType("character varying(250)");
+
+                    b.Property<string>("DocumentoTipo")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
                     b.Property<string>("Estado")
                         .IsRequired()
                         .HasMaxLength(50)

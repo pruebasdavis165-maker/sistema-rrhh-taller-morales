@@ -361,6 +361,9 @@ export interface CandidatoDto {
   estado: string;
   resultado?: string | null;
   reclutamientoId: number;
+  documentoNombre?: string | null;
+  tieneDocumento?: boolean;
+  documentoTipo?: string | null;
 }
 
 export interface ReclutamientoDto {
@@ -387,5 +390,8 @@ export interface CrearCandidatoRequest {
   telefono: string;
   correo: string;
   direccion?: string;
+  documentoNombre?: string | null;
+  documentoBase64?: string | null;
+  documentoTipo?: string | null;
 }
 

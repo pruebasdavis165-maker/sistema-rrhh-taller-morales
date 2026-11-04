@@ -17,7 +17,10 @@ public record CandidatoDto(
     string Direccion,
     string Estado,
     string? Resultado,
-    int ReclutamientoId
+    int ReclutamientoId,
+    string? DocumentoNombre,
+    bool TieneDocumento,
+    string? DocumentoTipo
 );
 
 public record ReclutamientoDto(
@@ -43,12 +46,19 @@ public record CrearCandidatoRequest(
     string Apellidos,
     string Telefono,
     string Correo,
-    string? Direccion = null
+    string? Direccion = null,
+    string? DocumentoNombre = null,
+    string? DocumentoBase64 = null,
+    string? DocumentoTipo = null
 );
 
 public record ActualizarEstadoCandidatoRequest(
     string NuevoEstado,
     string? Resultado = null
+);
+
+public record ActualizarEstadoVacanteRequest(
+    string NuevoEstado
 );
 
 [Authorize]
@@ -97,7 +107,10 @@ public class ReclutamientoController : ControllerBase
                 c.Direccion,
                 c.Estado,
                 c.Resultado,
-                c.ReclutamientoId
+                c.ReclutamientoId,
+                c.DocumentoNombre,
+                !string.IsNullOrEmpty(c.DocumentoBase64),
+                c.DocumentoTipo
             )).ToList()
         )).ToList();
 
@@ -136,6 +149,75 @@ public class ReclutamientoController : ControllerBase
         return StatusCode(StatusCodes.Status201Created, dto);
     }
 
+    [HttpPatch("{id:int}/estado")]
+    [Authorize(Roles = "Administrador,RRHH")]
+    public async Task<ActionResult<ReclutamientoDto>> CambiarEstadoVacante(int id, [FromBody] ActualizarEstadoVacanteRequest request, CancellationToken ct = default)
+    {
+        var vacante = await _context.Reclutamientos
+            .Include(r => r.Candidatos)
+            .FirstOrDefaultAsync(r => r.Id == id, ct);
+
+        if (vacante == null)
+            return NotFound(new { mensaje = $"Vacante de reclutamiento con ID {id} no encontrada." });
+
+        if (string.IsNullOrWhiteSpace(request.NuevoEstado))
+            return BadRequest(new { mensaje = "El nuevo estado de la vacante es requerido." });
+
+        vacante.CambiarEstado(request.NuevoEstado);
+        if (request.NuevoEstado.Equals("Cerrada", StringComparison.OrdinalIgnoreCase) || 
+            request.NuevoEstado.Equals("Cerrado", StringComparison.OrdinalIgnoreCase))
+        {
+            vacante.Cerrar(DateTime.UtcNow);
+        }
+
+        await _context.SaveChangesAsync(ct);
+
+        var dto = new ReclutamientoDto(
+            vacante.Id,
+            vacante.CargoSolicitado,
+            vacante.Descripcion,
+            vacante.FechaInicio,
+            vacante.FechaCierre,
+            vacante.Estado,
+            vacante.Candidatos.Count,
+            vacante.Candidatos.Select(c => new CandidatoDto(
+                c.Id,
+                c.Nombres,
+                c.Apellidos,
+                c.NombreCompleto,
+                c.Telefono,
+                c.Correo,
+                c.Direccion,
+                c.Estado,
+                c.Resultado,
+                c.ReclutamientoId,
+                c.DocumentoNombre,
+                !string.IsNullOrEmpty(c.DocumentoBase64),
+                c.DocumentoTipo
+            )).ToList()
+        );
+
+        return Ok(dto);
+    }
+
+    [HttpDelete("{id:int}")]
+    [Authorize(Roles = "Administrador,RRHH")]
+    public async Task<IActionResult> EliminarVacante(int id, CancellationToken ct = default)
+    {
+        var vacante = await _context.Reclutamientos
+            .Include(r => r.Candidatos)
+            .FirstOrDefaultAsync(r => r.Id == id, ct);
+
+        if (vacante == null)
+            return NotFound(new { mensaje = $"Vacante de reclutamiento con ID {id} no encontrada." });
+
+        _context.Reclutamientos.Remove(vacante);
+        await _context.SaveChangesAsync(ct);
+
+        _logger.LogInformation("Vacante con ID {Id} ({Cargo}) eliminada correctamente", id, vacante.CargoSolicitado);
+        return NoContent();
+    }
+
     [HttpPost("{id:int}/candidatos")]
     [Authorize(Roles = "Administrador,RRHH")]
     public async Task<ActionResult<CandidatoDto>> RegistrarCandidato(int id, [FromBody] CrearCandidatoRequest request, CancellationToken ct = default)
@@ -151,7 +233,11 @@ public class ReclutamientoController : ControllerBase
             request.Correo,
             request.Direccion ?? "Managua, Nicaragua",
             id,
-            "Postulado"
+            "Postulado",
+            null,
+            request.DocumentoNombre,
+            request.DocumentoBase64,
+            request.DocumentoTipo
         );
 
         _context.Candidatos.Add(candidato);
@@ -200,6 +286,10 @@ public class ReclutamientoController : ControllerBase
                                     <td style=""padding: 8px 0; font-weight: 600; color: #64748b;"">Ubicación / Residencia:</td>
                                     <td style=""padding: 8px 0;"">{candidato.Direccion}</td>
                                 </tr>
+                                {(candidato.DocumentoNombre != null ? $@"<tr>
+                                    <td style=""padding: 8px 0; font-weight: 600; color: #64748b;"">CV Adjunto:</td>
+                                    <td style=""padding: 8px 0; color: #2563eb; font-weight: 600;"">{candidato.DocumentoNombre}</td>
+                                </tr>" : "")}
                             </table>
                         </div>
                         <div style=""background-color: #eff6ff; border-left: 4px solid #3b82f6; padding: 12px 16px; border-radius: 0 8px 8px 0; margin-bottom: 20px;"">
@@ -233,10 +323,60 @@ public class ReclutamientoController : ControllerBase
             candidato.Direccion,
             candidato.Estado,
             candidato.Resultado,
-            candidato.ReclutamientoId
+            candidato.ReclutamientoId,
+            candidato.DocumentoNombre,
+            !string.IsNullOrEmpty(candidato.DocumentoBase64),
+            candidato.DocumentoTipo
         );
 
         return StatusCode(StatusCodes.Status201Created, dto);
+    }
+
+    [HttpGet("candidatos/{id:int}/documento")]
+    [Authorize]
+    public async Task<IActionResult> DescargarDocumentoCandidato(int id, CancellationToken ct = default)
+    {
+        var candidato = await _context.Candidatos.FindAsync(new object[] { id }, ct);
+        if (candidato == null || string.IsNullOrWhiteSpace(candidato.DocumentoBase64))
+            return NotFound(new { mensaje = "El candidato no posee un currículum o documento adjunto." });
+
+        try
+        {
+            var raw = candidato.DocumentoBase64;
+            if (raw.Contains(","))
+            {
+                raw = raw.Substring(raw.IndexOf(",") + 1);
+            }
+            var bytes = Convert.FromBase64String(raw);
+            var mime = !string.IsNullOrWhiteSpace(candidato.DocumentoTipo) 
+                ? candidato.DocumentoTipo 
+                : "application/pdf";
+            var fileName = !string.IsNullOrWhiteSpace(candidato.DocumentoNombre)
+                ? candidato.DocumentoNombre
+                : $"CV_{candidato.Nombres}_{candidato.Apellidos}.pdf";
+
+            return File(bytes, mime, fileName);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al procesar archivo de CV del candidato {Id}", id);
+            return BadRequest(new { mensaje = "El documento adjunto no posee un formato válido." });
+        }
+    }
+
+    [HttpDelete("candidatos/{candidatoId:int}")]
+    [Authorize(Roles = "Administrador,RRHH")]
+    public async Task<IActionResult> EliminarCandidato(int candidatoId, CancellationToken ct = default)
+    {
+        var candidato = await _context.Candidatos.FindAsync(new object[] { candidatoId }, ct);
+        if (candidato == null)
+            return NotFound(new { mensaje = $"Candidato con ID {candidatoId} no encontrado." });
+
+        _context.Candidatos.Remove(candidato);
+        await _context.SaveChangesAsync(ct);
+
+        _logger.LogInformation("Candidato con ID {Id} ({Nombre}) eliminado correctamente", candidatoId, candidato.NombreCompleto);
+        return NoContent();
     }
 
     [HttpPatch("candidatos/{candidatoId:int}/estado")]
@@ -260,7 +400,10 @@ public class ReclutamientoController : ControllerBase
             candidato.Direccion,
             candidato.Estado,
             candidato.Resultado,
-            candidato.ReclutamientoId
+            candidato.ReclutamientoId,
+            candidato.DocumentoNombre,
+            !string.IsNullOrEmpty(candidato.DocumentoBase64),
+            candidato.DocumentoTipo
         );
 
         return Ok(dto);

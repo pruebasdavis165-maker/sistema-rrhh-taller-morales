@@ -18,20 +18,21 @@ import {
   Phone, 
   Mail, 
   MapPin, 
-  ChevronRight, 
   CheckCircle, 
   UserCheck, 
   Send, 
   Sparkles, 
   AlertCircle,
-  Clock,
   CheckCircle2,
-  XCircle,
-  Building2,
-  Calendar,
-  Filter,
-  Check,
-  RefreshCw
+  Trash2,
+  Download,
+  FileText,
+  Eye,
+  Archive,
+  RefreshCw,
+  Paperclip,
+  UploadCloud,
+  FileCheck
 } from 'lucide-react';
 
 export default function ReclutamientoPage() {
@@ -62,10 +63,20 @@ export default function ReclutamientoPage() {
   // Modales
   const [modalNuevaVacante, setModalNuevaVacante] = useState(false);
   const [modalNuevoCandidato, setModalNuevoCandidato] = useState<number | null>(null);
+  const [candidatoDetalle, setCandidatoDetalle] = useState<CandidatoDto | null>(null);
 
   // Estados de carga de formularios
   const [guardando, setGuardando] = useState(false);
+  const [descargandoCv, setDescargandoCv] = useState(false);
   const [errorForm, setErrorForm] = useState<string | null>(null);
+
+  // Documento / CV adjunto
+  const [archivoCv, setArchivoCv] = useState<{
+    nombre: string;
+    base64: string;
+    tipo: string;
+    tamano: string;
+  } | null>(null);
 
   // Notificación de envío de correo electrónico
   const [notificacionEmail, setNotificacionEmail] = useState<{
@@ -100,7 +111,14 @@ export default function ReclutamientoPage() {
         setVacanteSeleccionada(data[0]);
       } else if (vacanteSeleccionada) {
         const updated = (data || []).find((v) => v.id === vacanteSeleccionada.id);
-        if (updated) setVacanteSeleccionada(updated);
+        if (updated) {
+          setVacanteSeleccionada(updated);
+          // Si hay un candidato en modal de detalle, actualizarlo también
+          if (candidatoDetalle) {
+            const candActualizado = updated.candidatos.find((c) => c.id === candidatoDetalle.id);
+            if (candActualizado) setCandidatoDetalle(candActualizado);
+          }
+        }
       }
     } catch (err) {
       console.error('Error al cargar vacantes de reclutamiento:', err);
@@ -137,6 +155,53 @@ export default function ReclutamientoPage() {
     }
   };
 
+  const handleCambiarEstadoVacante = async (vacanteId: number, nuevoEstado: string) => {
+    try {
+      await reclutamientoApi.cambiarEstadoVacante(vacanteId, nuevoEstado);
+      await cargarVacantes();
+      mostrarToast(`Vacante marcada como: ${nuevoEstado}`);
+    } catch (err: any) {
+      alert(`Error al actualizar la vacante: ${err.message || 'Error inesperado'}`);
+    }
+  };
+
+  const handleEliminarVacante = async (vacanteId: number, cargo: string) => {
+    if (!confirm(`¿Está seguro de eliminar la vacante "${cargo}"? También se eliminarán todos los candidatos vinculados a esta convocatoria. Esta acción no se puede deshacer.`)) {
+      return;
+    }
+
+    try {
+      await reclutamientoApi.eliminarVacante(vacanteId);
+      setVacanteSeleccionada(null);
+      await cargarVacantes();
+      mostrarToast('Vacante eliminada del sistema');
+    } catch (err: any) {
+      alert(`Error al eliminar vacante: ${err.message || 'Error inesperado'}`);
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 10 * 1024 * 1024) {
+      alert('El archivo no debe exceder los 10 MB.');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const base64 = reader.result as string;
+      setArchivoCv({
+        nombre: file.name,
+        base64: base64,
+        tipo: file.type || 'application/pdf',
+        tamano: (file.size / 1024).toFixed(1) + ' KB',
+      });
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleRegistrarCandidato = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!modalNuevoCandidato) return;
@@ -145,13 +210,21 @@ export default function ReclutamientoPage() {
     setErrorForm(null);
 
     try {
-      await reclutamientoApi.agregarCandidato(modalNuevoCandidato, formCandidato);
+      const payload: CrearCandidatoRequest = {
+        ...formCandidato,
+        documentoNombre: archivoCv?.nombre || null,
+        documentoBase64: archivoCv?.base64 || null,
+        documentoTipo: archivoCv?.tipo || null,
+      };
+
+      await reclutamientoApi.agregarCandidato(modalNuevoCandidato, payload);
       
       const nombreCompleto = `${formCandidato.nombres} ${formCandidato.apellidos}`.trim();
       const correoDestino = formCandidato.correo;
       const nombreVacante = vacanteSeleccionada?.cargoSolicitado || 'Convocatoria Técnica';
       
       setModalNuevoCandidato(null);
+      setArchivoCv(null);
       setFormCandidato({
         nombres: '',
         apellidos: '',
@@ -183,13 +256,45 @@ export default function ReclutamientoPage() {
     }
   };
 
-  const handleCambiarEstado = async (candidatoId: number, nuevoEstado: string) => {
+  const handleCambiarEstado = async (candidatoId: number, nuevoEstado: string, resultado?: string) => {
     try {
-      await reclutamientoApi.actualizarEstadoCandidato(candidatoId, nuevoEstado);
+      await reclutamientoApi.actualizarEstadoCandidato(candidatoId, nuevoEstado, resultado);
       await cargarVacantes();
-      mostrarToast(`Estado actualizado a: ${nuevoEstado}`);
+      mostrarToast(`Estado del candidato actualizado a: ${nuevoEstado}`);
     } catch (err: any) {
       alert(`Error al actualizar estado: ${err.message || 'Error inesperado'}`);
+    }
+  };
+
+  const handleEliminarCandidato = async (candidatoId: number, nombre: string) => {
+    if (!confirm(`¿Está seguro de eliminar la postulación de "${nombre}"? Esta acción no se puede revertir.`)) {
+      return;
+    }
+
+    try {
+      await reclutamientoApi.eliminarCandidato(candidatoId);
+      if (candidatoDetalle?.id === candidatoId) {
+        setCandidatoDetalle(null);
+      }
+      await cargarVacantes();
+      mostrarToast('Candidato eliminado correctamente');
+    } catch (err: any) {
+      alert(`Error al eliminar candidato: ${err.message || 'Error inesperado'}`);
+    }
+  };
+
+  const handleDescargarCv = async (candidatoId: number, nombreArchivo?: string | null) => {
+    setDescargandoCv(true);
+    try {
+      await reclutamientoApi.descargarDocumentoCandidato(
+        candidatoId, 
+        nombreArchivo || 'CV_Candidato.pdf'
+      );
+      mostrarToast('Descargando archivo adjunto...');
+    } catch (err: any) {
+      alert(err.message || 'No fue posible descargar el documento.');
+    } finally {
+      setDescargandoCv(false);
     }
   };
 
@@ -221,6 +326,8 @@ export default function ReclutamientoPage() {
     );
     return cumpleEstado && cumpleBusqueda;
   });
+
+  const estaCerrada = vacanteSeleccionada?.estado === 'Cerrado' || vacanteSeleccionada?.estado === 'Cerrada';
 
   return (
     <div className="flex-1 flex flex-col bg-slate-50 min-h-screen">
@@ -302,7 +409,7 @@ export default function ReclutamientoPage() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <h3 className="text-base font-bold text-slate-900">Vacantes y Proceso de Selección</h3>
-            <p className="text-xs text-slate-500">Seleccione una vacante para revisar sus postulantes técnicos</p>
+            <p className="text-xs text-slate-500">Seleccione una vacante para revisar postulantes técnicos o gestionar su estado</p>
           </div>
 
           {canManage && (
@@ -344,9 +451,10 @@ export default function ReclutamientoPage() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Lista Lateral de Vacantes */}
             <div className="space-y-3">
-              <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider">Convocatorias Disponibles</h4>
+              <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider">Convocatorias Registradas</h4>
               {(vacantes || []).map((v) => {
                 const seleccionada = vacanteSeleccionada?.id === v.id;
+                const vCerrada = v.estado === 'Cerrada' || v.estado === 'Cerrado';
                 return (
                   <div
                     key={v.id}
@@ -357,9 +465,13 @@ export default function ReclutamientoPage() {
                         : 'bg-white border-slate-200/80 hover:border-slate-300 shadow-2xs'
                     }`}
                   >
-                    <div className="flex items-start justify-between">
+                    <div className="flex items-start justify-between gap-2">
                       <h5 className="text-xs font-bold text-slate-900">{v.cargoSolicitado}</h5>
-                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                      <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full shrink-0 ${
+                        vCerrada 
+                          ? 'bg-slate-100 text-slate-600 border border-slate-300' 
+                          : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                      }`}>
                         {v.estado}
                       </span>
                     </div>
@@ -382,9 +494,13 @@ export default function ReclutamientoPage() {
                   {/* Cabecera de la Vacante Seleccionada */}
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
                     <div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <h3 className="text-base font-bold text-slate-900">{vacanteSeleccionada.cargoSolicitado}</h3>
-                        <span className="text-xs px-2.5 py-0.5 bg-emerald-50 text-emerald-700 font-semibold rounded-full border border-emerald-200">
+                        <span className={`text-xs px-2.5 py-0.5 font-semibold rounded-full border ${
+                          estaCerrada
+                            ? 'bg-slate-100 text-slate-600 border-slate-300'
+                            : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                        }`}>
                           {vacanteSeleccionada.estado}
                         </span>
                       </div>
@@ -392,13 +508,48 @@ export default function ReclutamientoPage() {
                     </div>
 
                     {canManage && (
-                      <button
-                        onClick={() => setModalNuevoCandidato(vacanteSeleccionada.id)}
-                        className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold flex items-center gap-2 shadow-xs cursor-pointer shrink-0"
-                      >
-                        <UserPlus className="w-4 h-4" />
-                        <span>Postular Candidato</span>
-                      </button>
+                      <div className="flex items-center gap-2 flex-wrap shrink-0">
+                        {/* Botón Cerrar / Reabrir Vacante */}
+                        {estaCerrada ? (
+                          <button
+                            onClick={() => handleCambiarEstadoVacante(vacanteSeleccionada.id, 'Abierto')}
+                            className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                            title="Reabrir convocatoria de selección"
+                          >
+                            <RefreshCw className="w-3.5 h-3.5" />
+                            <span>Reabrir</span>
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => handleCambiarEstadoVacante(vacanteSeleccionada.id, 'Cerrada')}
+                            className="px-3 py-2 bg-slate-100 hover:bg-amber-50 hover:text-amber-800 text-slate-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer border border-slate-200"
+                            title="Cerrar convocatoria (no se admiten más postulantes)"
+                          >
+                            <Archive className="w-3.5 h-3.5" />
+                            <span>Cerrar Vacante</span>
+                          </button>
+                        )}
+
+                        {/* Botón Eliminar Vacante */}
+                        <button
+                          onClick={() => handleEliminarVacante(vacanteSeleccionada.id, vacanteSeleccionada.cargoSolicitado)}
+                          className="p-2 text-rose-600 hover:bg-rose-50 rounded-xl transition-colors cursor-pointer border border-transparent hover:border-rose-200"
+                          title="Eliminar vacante permanentemente"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+
+                        {/* Botón Postular Candidato */}
+                        {!estaCerrada && (
+                          <button
+                            onClick={() => setModalNuevoCandidato(vacanteSeleccionada.id)}
+                            className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold flex items-center gap-2 shadow-xs cursor-pointer"
+                          >
+                            <UserPlus className="w-4 h-4" />
+                            <span>Postular Candidato</span>
+                          </button>
+                        )}
+                      </div>
                     )}
                   </div>
 
@@ -440,6 +591,7 @@ export default function ReclutamientoPage() {
                       <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
                         Candidatos Evaluados ({candidatosFiltrados.length} de {(vacanteSeleccionada.candidatos || []).length})
                       </h4>
+                      <p className="text-[11px] text-slate-400">Haga clic en cualquier candidato para ver su expediente y CV</p>
                     </div>
 
                     {candidatosFiltrados.length === 0 ? (
@@ -455,11 +607,12 @@ export default function ReclutamientoPage() {
                           return (
                             <div 
                               key={c.id} 
-                              className={`p-4 rounded-2xl border transition-all flex flex-col md:flex-row md:items-center justify-between gap-4 ${
+                              className={`p-4 rounded-2xl border transition-all flex flex-col md:flex-row md:items-center justify-between gap-4 cursor-pointer hover:shadow-md ${
                                 estaAprobado 
                                   ? 'bg-emerald-50/50 border-emerald-300 shadow-xs' 
-                                  : 'bg-white border-slate-200/80 hover:border-slate-300 shadow-2xs'
+                                  : 'bg-white border-slate-200/80 hover:border-blue-300 shadow-2xs'
                               }`}
+                              onClick={() => setCandidatoDetalle(c)}
                             >
                               <div className="flex items-start gap-3.5">
                                 <div className={`w-10 h-10 rounded-xl font-bold flex items-center justify-center shrink-0 text-sm shadow-2xs ${
@@ -469,7 +622,9 @@ export default function ReclutamientoPage() {
                                 </div>
                                 <div className="space-y-1.5">
                                   <div className="flex items-center gap-2 flex-wrap">
-                                    <span className="text-sm font-bold text-slate-900">{c.nombreCompleto}</span>
+                                    <span className="text-sm font-bold text-slate-900 hover:text-blue-600 transition-colors">
+                                      {c.nombreCompleto}
+                                    </span>
                                     <span className={`text-[10px] font-semibold px-2.5 py-0.5 rounded-full ${
                                       c.estado === 'Aprobado' ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' :
                                       c.estado === 'Rechazado' ? 'bg-rose-50 text-rose-700 border border-rose-200' :
@@ -479,6 +634,15 @@ export default function ReclutamientoPage() {
                                     }`}>
                                       {c.estado}
                                     </span>
+
+                                    {/* Indicador de CV adjunto */}
+                                    {c.tieneDocumento && (
+                                      <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200">
+                                        <FileCheck className="w-3 h-3 text-blue-600" />
+                                        <span>CV Adjunto</span>
+                                      </span>
+                                    )}
+
                                     {estaAprobado && (
                                       <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-800 bg-emerald-100 px-2.5 py-0.5 rounded-full border border-emerald-300">
                                         <Sparkles className="w-3 h-3 text-emerald-600" />
@@ -505,14 +669,17 @@ export default function ReclutamientoPage() {
                                 </div>
                               </div>
 
-                              {/* Acciones de Estado y Conexión Directa con Directorio de Empleados */}
-                              <div className="flex items-center gap-2.5 self-start md:self-auto flex-wrap">
+                              {/* Acciones Rápidas */}
+                              <div 
+                                className="flex items-center gap-2 self-start md:self-auto flex-wrap"
+                                onClick={(e) => e.stopPropagation()}
+                              >
                                 {canManage && (
-                                  <div className="w-44">
+                                  <div className="w-36">
                                     <select
                                       value={c.estado}
                                       onChange={(e) => handleCambiarEstado(c.id, e.target.value)}
-                                      className="appearance-none bg-slate-50 border border-slate-300 text-slate-900 text-sm rounded-xl focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 shadow-sm cursor-pointer"
+                                      className="appearance-none bg-slate-50 border border-slate-300 text-slate-900 text-xs rounded-xl focus:ring-blue-500 focus:border-blue-500 block w-full p-2 shadow-xs cursor-pointer font-medium"
                                     >
                                       <option value="Postulado">Postulado</option>
                                       <option value="En Evaluacion">En Evaluación</option>
@@ -523,14 +690,34 @@ export default function ReclutamientoPage() {
                                   </div>
                                 )}
 
+                                {/* Botón Ver Detalle */}
+                                <button
+                                  onClick={() => setCandidatoDetalle(c)}
+                                  className="p-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs transition-colors cursor-pointer"
+                                  title="Ver expediente y CV del candidato"
+                                >
+                                  <Eye className="w-4 h-4" />
+                                </button>
+
+                                {/* Botón Eliminar Postulante */}
+                                {canManage && (
+                                  <button
+                                    onClick={() => handleEliminarCandidato(c.id, c.nombreCompleto)}
+                                    className="p-2 text-rose-600 hover:bg-rose-50 rounded-xl transition-colors cursor-pointer border border-transparent hover:border-rose-200"
+                                    title="Eliminar candidato por error"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                )}
+
                                 {estaAprobado && canManage && (
                                   <Link
                                     href={`/empleados/nuevo?nombres=${encodeURIComponent(c.nombres)}&apellidos=${encodeURIComponent(c.apellidos)}&correo=${encodeURIComponent(c.correo)}&telefono=${encodeURIComponent(c.telefono)}&direccion=${encodeURIComponent(c.direccion || '')}&cargo=${encodeURIComponent(vacanteSeleccionada.cargoSolicitado)}`}
-                                    className="px-3.5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow-xs transition-all cursor-pointer hover:shadow"
+                                    className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow-xs transition-all cursor-pointer hover:shadow"
                                     title="Registrar formalmente en Directorio de Empleados"
                                   >
                                     <UserCheck className="w-4 h-4" />
-                                    <span>Contratar Empleado</span>
+                                    <span>Contratar</span>
                                   </Link>
                                 )}
                               </div>
@@ -550,7 +737,171 @@ export default function ReclutamientoPage() {
           </div>
         )}
 
-        {/* Modal Nueva Vacante con Jerarquía Visual Mejorada */}
+        {/* Modal Detalle Completo del Candidato y Currículum Vitae */}
+        {candidatoDetalle && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in">
+            <div className="bg-white rounded-2xl max-w-xl w-full p-6 shadow-2xl border border-slate-200 space-y-6 max-h-[90vh] overflow-y-auto animate-in zoom-in-95">
+              {/* Encabezado del Perfil */}
+              <div className="flex items-start justify-between pb-4 border-b border-slate-100">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-2xl bg-blue-600 text-white font-bold text-lg flex items-center justify-center shadow-sm">
+                    {candidatoDetalle.nombres.charAt(0)}{candidatoDetalle.apellidos.charAt(0)}
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-slate-900">{candidatoDetalle.nombreCompleto}</h3>
+                    <p className="text-xs text-slate-500">
+                      Postulante a: <strong className="text-slate-800">{vacanteSeleccionada?.cargoSolicitado}</strong>
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setCandidatoDetalle(null)}
+                  className="text-slate-400 hover:text-slate-600 cursor-pointer p-1 rounded-lg hover:bg-slate-100"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Información de Contacto */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-50/70 p-4 rounded-xl border border-slate-200/70 text-xs">
+                <div>
+                  <span className="text-slate-400 block text-[11px]">Correo Electrónico</span>
+                  <span className="font-semibold text-slate-800 flex items-center gap-1.5 mt-0.5">
+                    <Mail className="w-3.5 h-3.5 text-slate-400" />
+                    {candidatoDetalle.correo}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-slate-400 block text-[11px]">Teléfono de Contacto</span>
+                  <span className="font-semibold text-slate-800 flex items-center gap-1.5 mt-0.5">
+                    <Phone className="w-3.5 h-3.5 text-slate-400" />
+                    {candidatoDetalle.telefono}
+                  </span>
+                </div>
+                <div className="sm:col-span-2 pt-2 border-t border-slate-200/50">
+                  <span className="text-slate-400 block text-[11px]">Dirección Domiciliar</span>
+                  <span className="font-medium text-slate-700 flex items-center gap-1.5 mt-0.5">
+                    <MapPin className="w-3.5 h-3.5 text-slate-400" />
+                    {candidatoDetalle.direccion || 'No especificada'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Sección Currículum Vitae (CV) */}
+              <div className="space-y-2">
+                <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                  <FileText className="w-4 h-4 text-blue-600" />
+                  <span>Currículum Vitae (Documento Adjunto)</span>
+                </h4>
+
+                {candidatoDetalle.tieneDocumento ? (
+                  <div className="p-4 bg-blue-50/60 border border-blue-200 rounded-xl flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+                        <FileText className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-slate-900">
+                          {candidatoDetalle.documentoNombre || 'CV_Candidato.pdf'}
+                        </p>
+                        <p className="text-[11px] text-blue-700 mt-0.5">
+                          Documento cargado durante el registro de postulación
+                        </p>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => handleDescargarCv(candidatoDetalle.id, candidatoDetalle.documentoNombre)}
+                      disabled={descargandoCv}
+                      className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-xs shrink-0 disabled:opacity-50"
+                    >
+                      {descargandoCv ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Download className="w-4 h-4" />
+                      )}
+                      <span>Descargar CV</span>
+                    </button>
+                  </div>
+                ) : (
+                  <div className="p-4 bg-slate-50 border border-dashed border-slate-200 rounded-xl text-center text-xs text-slate-500">
+                    <Paperclip className="w-5 h-5 text-slate-400 mx-auto mb-1 opacity-70" />
+                    <span>No se adjuntó archivo de currículum vitae al momento del registro.</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Cambio de Estado y Evaluación */}
+              {canManage && (
+                <div className="space-y-3 pt-2 border-t border-slate-100">
+                  <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                    Estado en el Proceso de Selección
+                  </h4>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {['Postulado', 'En Evaluacion', 'Entrevistado', 'Aprobado', 'Rechazado'].map((st) => {
+                      const activo = candidatoDetalle.estado === st;
+                      return (
+                        <button
+                          key={st}
+                          onClick={() => {
+                            handleCambiarEstado(candidatoDetalle.id, st);
+                            setCandidatoDetalle({ ...candidatoDetalle, estado: st });
+                          }}
+                          className={`py-2 px-3 text-xs rounded-xl font-semibold border transition-all cursor-pointer text-center ${
+                            activo
+                              ? st === 'Aprobado'
+                                ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
+                                : st === 'Rechazado'
+                                ? 'bg-rose-600 text-white border-rose-600 shadow-xs'
+                                : 'bg-blue-600 text-white border-blue-600 shadow-xs'
+                              : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-white'
+                          }`}
+                        >
+                          {st === 'En Evaluacion' ? 'En Evaluación' : st}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Pie de Acciones del Modal */}
+              <div className="pt-4 border-t border-slate-100 flex items-center justify-between gap-3">
+                {canManage ? (
+                  <button
+                    onClick={() => handleEliminarCandidato(candidatoDetalle.id, candidatoDetalle.nombreCompleto)}
+                    className="px-3.5 py-2 text-rose-600 hover:bg-rose-50 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer border border-transparent hover:border-rose-200"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    <span>Eliminar Candidato</span>
+                  </button>
+                ) : <div />}
+
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setCandidatoDetalle(null)}
+                    className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl cursor-pointer transition-colors"
+                  >
+                    Cerrar
+                  </button>
+
+                  {candidatoDetalle.estado === 'Aprobado' && canManage && (
+                    <Link
+                      href={`/empleados/nuevo?nombres=${encodeURIComponent(candidatoDetalle.nombres)}&apellidos=${encodeURIComponent(candidatoDetalle.apellidos)}&correo=${encodeURIComponent(candidatoDetalle.correo)}&telefono=${encodeURIComponent(candidatoDetalle.telefono)}&direccion=${encodeURIComponent(candidatoDetalle.direccion || '')}&cargo=${encodeURIComponent(vacanteSeleccionada?.cargoSolicitado || '')}`}
+                      className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-xl flex items-center gap-1.5 shadow-xs transition-all cursor-pointer"
+                    >
+                      <UserCheck className="w-4 h-4" />
+                      <span>Proceder a Contratación</span>
+                    </Link>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal Nueva Vacante */}
         {modalNuevaVacante && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
             <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-xl border border-slate-200/80 space-y-5 animate-in fade-in zoom-in-95">
@@ -627,10 +978,10 @@ export default function ReclutamientoPage() {
           </div>
         )}
 
-        {/* Modal Postular Candidato con Jerarquía Visual Rediseñada (Fase 3) */}
+        {/* Modal Postular Candidato con Soporte para Adjuntar CV */}
         {modalNuevoCandidato && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-            <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-xl border border-slate-200/80 space-y-5 animate-in fade-in zoom-in-95">
+            <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-xl border border-slate-200/80 space-y-5 animate-in fade-in zoom-in-95 max-h-[90vh] overflow-y-auto">
               <div className="flex items-start justify-between pb-3 border-b border-slate-100">
                 <div className="flex items-center gap-2.5">
                   <div className="w-9 h-9 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center">
@@ -643,18 +994,18 @@ export default function ReclutamientoPage() {
                     </p>
                   </div>
                 </div>
-                <button onClick={() => setModalNuevoCandidato(null)} className="text-slate-400 hover:text-slate-600 cursor-pointer p-1">
+                <button onClick={() => { setModalNuevoCandidato(null); setArchivoCv(null); }} className="text-slate-400 hover:text-slate-600 cursor-pointer p-1">
                   <X className="w-5 h-5" />
                 </button>
               </div>
 
-              {/* Aviso Informativo del Envío de Correo Real */}
+              {/* Aviso Informativo del Envío de Correo */}
               <div className="p-3.5 bg-blue-50/90 border border-blue-200 text-blue-900 rounded-xl text-xs flex items-start gap-2.5">
                 <Send className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
                 <div>
                   <span className="font-semibold block text-blue-900">Notificación Automática por Correo</span>
                   <p className="text-[11px] text-blue-700 mt-0.5">
-                    Al completar este registro, el sistema enviará inmediatamente un correo de confirmación formal con los datos de la convocatoria al buzón del candidato.
+                    Al guardar este registro, el sistema enviará un correo formal con el resumen de la vacante al buzón del candidato.
                   </p>
                 </div>
               </div>
@@ -738,10 +1089,52 @@ export default function ReclutamientoPage() {
                   />
                 </div>
 
+                {/* Subida de Currículum Vitae (CV) */}
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">
+                    Currículum Vitae (CV / Hoja de Vida)
+                  </label>
+                  
+                  {archivoCv ? (
+                    <div className="p-3.5 bg-blue-50 border border-blue-200 rounded-xl flex items-center justify-between text-xs">
+                      <div className="flex items-center gap-2.5 overflow-hidden">
+                        <FileText className="w-5 h-5 text-blue-600 shrink-0" />
+                        <div className="truncate">
+                          <p className="font-bold text-slate-900 truncate">{archivoCv.nombre}</p>
+                          <p className="text-[11px] text-slate-500">{archivoCv.tamano}</p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setArchivoCv(null)}
+                        className="text-rose-600 hover:text-rose-800 p-1 text-xs font-semibold cursor-pointer shrink-0"
+                      >
+                        Quitar
+                      </button>
+                    </div>
+                  ) : (
+                    <label className="flex flex-col items-center justify-center p-4 border-2 border-dashed border-slate-300 hover:border-blue-400 rounded-xl bg-slate-50 hover:bg-blue-50/40 transition-colors cursor-pointer group">
+                      <UploadCloud className="w-6 h-6 text-slate-400 group-hover:text-blue-600 transition-colors mb-1" />
+                      <span className="text-xs font-semibold text-slate-700 group-hover:text-blue-700">
+                        Seleccionar o arrastrar archivo PDF o Word
+                      </span>
+                      <span className="text-[11px] text-slate-400 mt-0.5">
+                        PDF, DOCX hasta 10MB
+                      </span>
+                      <input
+                        type="file"
+                        accept=".pdf,.doc,.docx"
+                        onChange={handleFileChange}
+                        className="hidden"
+                      />
+                    </label>
+                  )}
+                </div>
+
                 <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2.5">
                   <button
                     type="button"
-                    onClick={() => setModalNuevoCandidato(null)}
+                    onClick={() => { setModalNuevoCandidato(null); setArchivoCv(null); }}
                     className="px-4 py-2.5 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
                   >
                     Cancelar
